@@ -1,0 +1,44 @@
+dataset:
+    name: &dataset_name 'coco2017'
+    root: &data_dir !join ['./resource/data/', *dataset_name, '/']
+    data:
+        annot_prefix: &annot_prefix !join [&data_dir, 'annotations/instances_']
+        img_prefix: &img_prefix !join [&data_dir, 'images/]
+        train:
+            annotation: !join [*annot_prefix, 'train2017.json']
+            img_dir: !join [*img_prefix, 'train2017/']
+        val:
+            annotation: !join [*annot_prefix, 'val2017.json']
+            img_dir: !join [*img_prefix, 'val2017/']
+
+input_shape: [3, 224, 224]
+
+model:
+    type: &model_type 'retinanet50'
+    experiment: &experiment !join [*dataset_name, '-', *model_type]
+    ckpt: !join ['./resource/ckpt/', *experiment, '.ckpt']
+    params:
+        depth: 50
+        pretrained: True
+
+train:
+    epoch: 100
+    batch_size: 2
+    rough_size: [256, 256]
+    num_logs: 50
+    optimizer:
+        type: 'adam'
+        params:
+            lr: 0.00001
+    criterion:
+        type: 'CrossEntropyLoss'
+        params:
+            reduction: 'elementwise_mean'
+
+test:
+    batch_size: 1
+    jquality: 0
+    compression:
+        type:
+        size:
+    autoencoder:
