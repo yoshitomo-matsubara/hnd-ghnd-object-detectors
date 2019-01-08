@@ -21,8 +21,7 @@ MODEL_URL_DICT = {
 
 
 def nms(dets, thresh):
-    "Dispatch to either CPU or GPU NMS implementations.\
-    Accept dets as tensor"""
+    # Dispatch to either CPU or GPU NMS implementations. Accept dets as tensor
     return pth_nms(dets, thresh)
 
 
@@ -223,13 +222,9 @@ class RetinaNet(nn.Module):
 
         self.regressor = RegressionModel(256)
         self.classifier = ClassificationModel(256, num_classes=num_classes)
-
         self.anchors = Anchors()
-
         self.regress_boxes = BBoxTransform()
-
         self.clip_boxes = ClipBoxes()
-
         self.focal_loss = losses.FocalLoss()
 
         for m in self.modules():
@@ -247,33 +242,22 @@ class RetinaNet(nn.Module):
         self.freeze_bn()
 
     def freeze_bn(self):
-        '''Freeze BatchNorm layers.'''
+        # Freeze BatchNorm layers
         for layer in self.modules():
             if isinstance(layer, nn.BatchNorm2d):
                 layer.eval()
 
-    def forward(self, inputs):
-        if self.training:
-            img_batch, annotations = inputs
-        else:
-            img_batch = inputs
-
-        batch_shape = img_batch.shape
-        x2, x3, x4 = self.backbone(img_batch)
-
+    def detect(self, x2, x3, x4, anchors, annotations, batch_shape):
         features = self.fpn([x2, x3, x4])
         regression = torch.cat([self.regressor(feature) for feature in features], dim=1)
         classification = torch.cat([self.classifier(feature) for feature in features], dim=1)
-        anchors = self.anchors(img_batch)
 
         if self.training:
             return self.focal_loss(classification, regression, anchors, annotations)
 
         transformed_anchors = self.regress_boxes(anchors, regression)
         transformed_anchors = self.clip_boxes(transformed_anchors, batch_shape)
-
         scores = torch.max(classification, dim=2, keepdim=True)[0]
-
         scores_over_thresh = (scores > 0.05)[0, :, 0]
 
         if scores_over_thresh.sum() == 0:
@@ -283,12 +267,21 @@ class RetinaNet(nn.Module):
         classification = classification[:, scores_over_thresh, :]
         transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
         scores = scores[:, scores_over_thresh, :]
-
         anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
-
         nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
-
         return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
+
+    def forward(self, inputs):
+        if self.training:
+            img_batch, annotations = inputs
+        else:
+            img_batch = inputs
+            annotations = None
+
+        batch_shape = img_batch.shape
+        anchors = self.anchors(img_batch)
+        x2, x3, x4 = self.backbone(img_batch)
+        return self.detect(x2, x3, x4, anchors, annotations, batch_shape)
 
 
 def retinanet18(num_classes, pretrained=False, **kwargs):
