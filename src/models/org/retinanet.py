@@ -28,7 +28,7 @@ def nms(dets, thresh):
 
 class PyramidFeatures(nn.Module):
     def __init__(self, c3_size, c4_size, c5_size, feature_size=256):
-        super(PyramidFeatures, self).__init__()
+        super().__init__()
 
         # upsample C5 to get P5 from the FPN paper
         self.p5_1 = nn.Conv2d(c5_size, feature_size, kernel_size=1, stride=1, padding=0)
@@ -235,7 +235,7 @@ class RetinaNet(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.weight.data.normal_(0, math.sqrt(2.0 / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
@@ -258,6 +258,7 @@ class RetinaNet(nn.Module):
         else:
             img_batch = inputs
 
+        batch_shape = img_batch.shape
         x2, x3, x4 = self.backbone(img_batch)
 
         features = self.fpn([x2, x3, x4])
@@ -269,7 +270,7 @@ class RetinaNet(nn.Module):
             return self.focal_loss(classification, regression, anchors, annotations)
 
         transformed_anchors = self.regress_boxes(anchors, regression)
-        transformed_anchors = self.clip_boxes(transformed_anchors, img_batch)
+        transformed_anchors = self.clip_boxes(transformed_anchors, batch_shape)
 
         scores = torch.max(classification, dim=2, keepdim=True)[0]
 

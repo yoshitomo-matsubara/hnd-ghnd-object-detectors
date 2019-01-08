@@ -140,8 +140,8 @@ class ClipBoxes(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, boxes, img):
-        batch_size, num_channels, height, width = img.shape
+    def forward(self, boxes, batch_shape):
+        batch_size, num_channels, height, width = batch_shape
         boxes[:, :, 0] = torch.clamp(boxes[:, :, 0], min=0)
         boxes[:, :, 1] = torch.clamp(boxes[:, :, 1], min=0)
         boxes[:, :, 2] = torch.clamp(boxes[:, :, 2], max=width)
