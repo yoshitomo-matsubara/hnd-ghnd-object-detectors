@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 import shutil
 import time
@@ -16,7 +17,6 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 
 from myutils.common import log_util
-import logging
 
 
 class AverageMeter(object):
