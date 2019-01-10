@@ -244,7 +244,7 @@ def test(data_loader, model, criterion, args, is_valid=False):
                     '{0}: [{1}/{2}]\tTime {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                     'Loss {loss.val:.4f} ({loss.avg:.4f})\tPrec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
                     'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
-                        'Validation' if is_valid else 'Test',i + 1, len(val_loader),
+                        'Validation' if is_valid else 'Test',i + 1, len(data_loader),
                         batch_time=batch_time, loss=losses, top1=top1, top5=top5)
                 )
         logging.info(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'.format(top1=top1, top5=top5))
@@ -261,7 +261,7 @@ def save_checkpoint(state, is_best, file_path):
         shutil.copyfile(file_path, file_path + '.best')
 
 
-def build_model(model, train_loader, valid_loader, train_sampler, criterion, optimizer, best_prec1, args):
+def build_model(model, train_loader, val_loader, train_sampler, criterion, optimizer, best_prec1, args):
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
@@ -271,7 +271,7 @@ def build_model(model, train_loader, valid_loader, train_sampler, criterion, opt
         train(train_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
-        prec1 = validate(valid_loader, model, criterion, args)
+        prec1 = validate(val_loader, model, criterion, args)
 
         # remember best prec@1 and save checkpoint
         is_best = prec1 > best_prec1
