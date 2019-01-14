@@ -1,20 +1,16 @@
 import argparse
+import collections
 import os
 
-import collections
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from torchvision import transforms
 
 from models.org.retinanet import get_retinanet
 from myutils.common import file_util, yaml_util
-from utils import eval_util
 from structure.datasets import CocoDataset, CSVDataset
-from structure.samplers import AspectRatioBasedSampler
-from structure.transformers import collater, Resizer, Augmenter, Normalizer
+from utils import eval_util, retinanet_util
 
 
 def get_args():
@@ -24,32 +20,6 @@ def get_args():
     argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
     argparser.add_argument('-init', action='store_true', help='overwrite checkpoint')
     return argparser.parse_args()
-
-
-def get_datasets(dataset_config):
-    dataset_name = dataset_config['name']
-    data_config = dataset_config['data']
-    if dataset_name == 'coco':
-        train_data_config = data_config['train']
-        train_dataset = CocoDataset(train_data_config['annotation'], train_data_config['img_dir'],
-                                    transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
-        val_data_config = data_config['val']
-        valid_dataset = CocoDataset(val_data_config['annotation'], val_data_config['img_dir'],
-                                    transform=transforms.Compose([Normalizer(), Resizer()]))
-        return train_dataset, valid_dataset
-    elif dataset_name == 'csv':
-        class_file_path = data_config['class']
-        train_dataset = CSVDataset(data_file_path=data_config['train'], class_list=class_file_path,
-                                   transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
-        val_file_path = data_config['val']
-        if not file_util.check_if_exists(val_file_path):
-            valid_dataset = None
-            print('No validation annotations provided.')
-        else:
-            valid_dataset = CSVDataset(data_file_path=val_file_path, class_list=class_file_path,
-                                       transform=transforms.Compose([Normalizer(), Resizer()]))
-        return train_dataset, valid_dataset
-    raise ValueError('dataset_name `{}` is not expected'.format(dataset_name))
 
 
 def get_model(device, **kwargs):
@@ -85,7 +55,7 @@ def train(retinanet, train_dataloader, optimizer, loss_hist_list, epoch, num_log
             if i > 0 and i % unit_size == 0:
                 print('Epoch: {} | Iteration: {} | Classification loss: {:1.5f}'
                       ' | Regression loss: {:1.5f} | Running loss: {:1.5f}'.format(
-                        epoch, i + 1, float(classification_loss), float(regression_loss), np.mean(loss_hist_list)))
+                    epoch, i + 1, float(classification_loss), float(regression_loss), np.mean(loss_hist_list)))
 
             del classification_loss
             del regression_loss
@@ -102,9 +72,8 @@ def save_ckpt(model, file_path):
 def build_model(args, device, config):
     model_config = config['model']
     # Create the data loaders
-    train_dataset, val_dataset = get_datasets(config['dataset'])
-    train_sampler = AspectRatioBasedSampler(train_dataset, batch_size=2, drop_last=False)
-    train_dataloader = DataLoader(train_dataset, num_workers=3, collate_fn=collater, batch_sampler=train_sampler)
+    train_dataset, val_dataset = retinanet_util.get_datasets(config['dataset'])
+    train_data_loader = retinanet_util.get_train_data_loader(train_dataset)
 
     # Create the model
     model = get_model(device, num_classes=train_dataset.num_classes(), **model_config['params'])
@@ -121,7 +90,7 @@ def build_model(args, device, config):
     model.module.freeze_bn()
     print('Num training images: {}'.format(len(train_dataset)))
     for epoch in range(num_epochs):
-        epoch_losses = train(model, train_dataloader, optimizer, loss_hist_list, epoch, num_logs)
+        epoch_losses = train(model, train_data_loader, optimizer, loss_hist_list, epoch, num_logs)
         if val_dataset is None:
             continue
 
