@@ -1,5 +1,6 @@
-from utils import retinanet_util
 from torch.utils.data import DataLoader
+
+from utils import retinanet_util
 
 
 def get_data_loaders(dataset_config, model_type, batch_size):
