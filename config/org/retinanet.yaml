@@ -2,8 +2,8 @@ dataset:
     name: &dataset_name 'coco2017'
     root: &data_dir !join ['./resource/data/', *dataset_name, '/']
     data:
-        annot_prefix: &annot_prefix !join [&data_dir, 'annotations/instances_']
-        img_prefix: &img_prefix !join [&data_dir, 'images/]
+        annot_prefix: &annot_prefix !join [*data_dir, 'annotations/instances_']
+        img_prefix: &img_prefix !join [*data_dir, 'images/]
         train:
             annotation: !join [*annot_prefix, 'train2017.json']
             img_dir: !join [*img_prefix, 'train2017/']
@@ -24,7 +24,6 @@ model:
 train:
     epoch: 100
     batch_size: 2
-    rough_size: [256, 256]
     num_logs: 50
     optimizer:
         type: 'adam'
