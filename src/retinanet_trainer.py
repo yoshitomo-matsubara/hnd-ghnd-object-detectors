@@ -106,7 +106,7 @@ def build_model(args, device, config):
         save_ckpt(model, ckpt_file_path)
 
 
-def run(args):
+def main(args):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if device == 'cuda':
         cudnn.benchmark = True
@@ -118,4 +118,4 @@ def run(args):
 
 
 if __name__ == '__main__':
-    run(get_args())
+    main(get_args())

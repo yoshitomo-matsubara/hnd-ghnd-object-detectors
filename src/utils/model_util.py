@@ -4,7 +4,7 @@ from utils import retinanet_util
 
 
 def get_data_loaders(dataset_config, model_type, batch_size):
-    if model_type == 'retinanet':
+    if model_type.startswith('retinanet'):
         train_dataset, val_dataset = retinanet_util.get_datasets(dataset_config)
         train_data_loader = retinanet_util.get_train_data_loader(train_dataset, batch_size=batch_size)
         val_data_loader = DataLoader(val_dataset, num_workers=3)
