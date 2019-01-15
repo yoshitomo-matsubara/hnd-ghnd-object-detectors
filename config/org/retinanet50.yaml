@@ -17,6 +17,7 @@ model:
     ckpt: !join ['./resource/ckpt/', *experiment, '.ckpt']
     params:
         depth: 50
+        num_classes: 101
         pretrained: True
 
 train:

@@ -1,13 +1,24 @@
 import logging
 
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
+from models.org.retinanet import get_retinanet
 from myutils.common import file_util
 from structure.datasets import CocoDataset, CSVDataset
 from structure.samplers import AspectRatioBasedSampler
 from structure.transformers import Resizer, Augmenter, Normalizer
 from structure.transformers import collater
+
+
+def get_model(device, **kwargs):
+    model = get_retinanet(**kwargs)
+    model = model.to(device)
+    model.training = True
+    if device == 'cuda':
+        model = nn.DataParallel(model)
+    return model
 
 
 def get_datasets(dataset_config):

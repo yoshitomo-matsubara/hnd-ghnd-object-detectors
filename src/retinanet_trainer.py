@@ -8,7 +8,6 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
-from models.org.retinanet import get_retinanet
 from myutils.common import file_util, log_util, yaml_util
 from myutils.pytorch import func_util
 from structure.datasets import CocoDataset, CSVDataset
@@ -22,15 +21,6 @@ def get_args():
     argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
     argparser.add_argument('-init', action='store_true', help='overwrite checkpoint')
     return argparser.parse_args()
-
-
-def get_model(device, **kwargs):
-    model = get_retinanet(**kwargs)
-    model = model.to(device)
-    model.training = True
-    if device == 'cuda':
-        model = torch.nn.DataParallel(model)
-    return model
 
 
 def train(retinanet, train_dataloader, optimizer, loss_hist_list, epoch, num_logs):
@@ -77,7 +67,7 @@ def build_model(args, device, config):
     train_data_loader = retinanet_util.get_train_data_loader(train_dataset, train_config['batch_size'])
 
     model_config = config['model']
-    model = get_model(device, num_classes=train_dataset.num_classes(), **model_config['params'])
+    model = retinanet_util.get_model(device, **model_config['params'])
     num_epochs = train_config['epoch'] if args.epoch is None else args.epoch
     num_logs = train_config['num_logs']
 

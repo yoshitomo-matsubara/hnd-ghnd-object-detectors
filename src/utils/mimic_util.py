@@ -50,7 +50,7 @@ def get_teacher_model(teacher_model_config, input_shape, device):
 def get_student_model(teacher_model_type, student_model_config):
     student_model_type = student_model_config['type']
     if teacher_model_type.startswith('retinanet') and student_model_type == 'retinanet_head_mimic':
-        return RetinaNetHeadMimic(student_model_config['version'])
+        return RetinaNetHeadMimic(teacher_model_type, student_model_config['version'])
     raise ValueError('teacher_model_type `{}` is not expected'.format(teacher_model_type))
 
 
@@ -64,9 +64,6 @@ def load_student_model(student_config, teacher_model_type, device):
 
 def get_org_model(teacher_model_config, device):
     teacher_config = yaml_util.load_yaml_file(teacher_model_config['config'])
-    if teacher_config['model']['type'] == 'inception_v3':
-        teacher_config['model']['params']['aux_logits'] = False
-
     model = model_util.get_model(teacher_config, device)
     model_config = teacher_config['model']
     resume_from_ckpt(model_config['ckpt'], model)
