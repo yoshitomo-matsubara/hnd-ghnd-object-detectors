@@ -1,5 +1,6 @@
 import argparse
 import collections
+import logging
 import os
 
 import numpy as np
@@ -8,7 +9,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 
 from models.org.retinanet import get_retinanet
-from myutils.common import file_util, yaml_util
+from myutils.common import file_util, log_util, yaml_util
 from structure.datasets import CocoDataset, CSVDataset
 from utils import eval_util, retinanet_util
 
@@ -53,14 +54,14 @@ def train(retinanet, train_dataloader, optimizer, loss_hist_list, epoch, num_log
             loss_hist_list.append(float(loss))
             epoch_loss_list.append(float(loss))
             if i > 0 and i % unit_size == 0:
-                print('Epoch: {} | Iteration: {} | Classification loss: {:1.5f}'
-                      ' | Regression loss: {:1.5f} | Running loss: {:1.5f}'.format(
-                    epoch, i + 1, float(classification_loss), float(regression_loss), np.mean(loss_hist_list)))
+                logging.info('Epoch: {} | Iteration: {} | Classification loss: {:1.5f} | Regression loss: {:1.5f} '
+                             '| Running loss: {:1.5f}'.format(epoch, i + 1, float(classification_loss),
+                                                              float(regression_loss), np.mean(loss_hist_list)))
 
             del classification_loss
             del regression_loss
         except Exception as e:
-            print(e)
+            logging.info(e)
     return epoch_loss_list
 
 
@@ -88,19 +89,19 @@ def build_model(args, device, config):
     loss_hist_list = collections.deque(maxlen=500)
     model.train()
     model.module.freeze_bn()
-    print('Num training images: {}'.format(len(train_dataset)))
+    logging.info('Num training images: {}'.format(len(train_dataset)))
     for epoch in range(num_epochs):
         epoch_losses = train(model, train_data_loader, optimizer, loss_hist_list, epoch, num_logs)
         if val_dataset is None:
             continue
 
         if isinstance(val_dataset, CocoDataset):
-            print('Evaluating dataset')
+            logging.info('Evaluating dataset')
             eval_util.evaluate_coco(val_dataset, model)
         elif isinstance(val_dataset, CSVDataset):
-            print('Evaluating dataset')
+            logging.info('Evaluating dataset')
             meam_ap = eval_util.evaluate_csv(val_dataset, model)
-            print('mAP: {}'.format(meam_ap))
+            logging.info('mAP: {}'.format(meam_ap))
 
         scheduler.step(np.mean(epoch_losses))
         save_ckpt(model, ckpt_file_path)
@@ -111,8 +112,9 @@ def main(args):
     if device == 'cuda':
         cudnn.benchmark = True
 
-    print('CUDA is {}available'.format('' if torch.cuda.is_available() else 'not '))
-    print('Device setting is `{}`'.format(device))
+    log_util.setup_logging(os.path.join(args.log, args.model))
+    logging.info('CUDA is {}available'.format('' if torch.cuda.is_available() else 'not '))
+    logging.info('Device: {}'.format(device))
     config = yaml_util.load_yaml_file(args.config)
     build_model(args, device, config)
 

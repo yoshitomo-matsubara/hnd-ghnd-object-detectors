@@ -1,3 +1,5 @@
+import logging
+
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
@@ -26,7 +28,7 @@ def get_datasets(dataset_config):
         val_file_path = data_config['val']
         if not file_util.check_if_exists(val_file_path):
             val_dataset = None
-            print('No validation annotations provided.')
+            logging.info('No validation annotations provided.')
         else:
             val_dataset = CSVDataset(data_file_path=val_file_path, class_list=class_file_path,
                                      transform=transforms.Compose([Normalizer(), Resizer()]))
