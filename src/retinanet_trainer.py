@@ -10,6 +10,7 @@ import torch.optim as optim
 
 from models.org.retinanet import get_retinanet
 from myutils.common import file_util, log_util, yaml_util
+from myutils.pytorch import func_util
 from structure.datasets import CocoDataset, CSVDataset
 from utils import eval_util, retinanet_util
 
@@ -71,22 +72,21 @@ def save_ckpt(model, file_path):
 
 
 def build_model(args, device, config):
-    model_config = config['model']
-    # Create the data loaders
     train_dataset, val_dataset = retinanet_util.get_datasets(config['dataset'])
-    train_data_loader = retinanet_util.get_train_data_loader(train_dataset)
-
-    # Create the model
-    model = get_model(device, num_classes=train_dataset.num_classes(), **model_config['params'])
-
     train_config = config['train']
+    train_data_loader = retinanet_util.get_train_data_loader(train_dataset, train_config['batch_size'])
+
+    model_config = config['model']
+    model = get_model(device, num_classes=train_dataset.num_classes(), **model_config['params'])
     num_epochs = train_config['epoch'] if args.epoch is None else args.epoch
     num_logs = train_config['num_logs']
-    ckpt_file_path = model_config['ckpt']
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-5)
+    optimizer_config = train_config['optimizer']
+    optimizer = func_util.get_optimizer(model, optimizer_config['type'], optimizer_config['params'])
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
     loss_hist_list = collections.deque(maxlen=500)
+
+    ckpt_file_path = model_config['ckpt']
     model.train()
     model.module.freeze_bn()
     logging.info('Num training images: {}'.format(len(train_dataset)))
