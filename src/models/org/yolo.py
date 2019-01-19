@@ -116,8 +116,32 @@ class Upsample(nn.Module):
         return F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
 
 
-class YOLOLayer(nn.Module):
+class RouteBlock(nn.Module):
+    def __init__(self, modules):
+        super().__init__()
+        self.modules = modules
 
+    def forward(self, x):
+        z = x
+        output_list = list()
+        for module in self.modules:
+            z = module(z)
+            output_list.append(z)
+        return torch.cat(output_list, 1)
+
+
+class ShortcutBlock(nn.Module):
+    def __init__(self, modules):
+        super().__init__()
+        self.first_module = modules[0]
+        self.seq = nn.Sequential(*modules[1:])
+
+    def forward(self, x):
+        z = self.first_module(x)
+        return z + self.seq(z)
+
+
+class YOLOLayer(nn.Module):
     def __init__(self, anchors, num_classes, img_dim, anchor_idxs, cfg):
         super(YOLOLayer, self).__init__()
 
@@ -257,31 +281,30 @@ class YOLOLayer(nn.Module):
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(),\
                    num_targets, num_tps, num_fps, num_extra_fps, num_fns, target_categories
 
-        else:
-            if ONNX_EXPORT:
-                p = p.view(1, -1, 85)
-                xy = torch.sigmoid(p[..., 0:2]) + self.grid_xy  # x, y
-                width_height = torch.exp(p[..., 2:4]) * self.anchor_wh  # width, height
-                p_conf = torch.sigmoid(p[..., 4:5])  # Conf
-                p_cls = p[..., 5:85]
+        if ONNX_EXPORT:
+            p = p.view(1, -1, 85)
+            xy = torch.sigmoid(p[..., 0:2]) + self.grid_xy  # x, y
+            width_height = torch.exp(p[..., 2:4]) * self.anchor_wh  # width, height
+            p_conf = torch.sigmoid(p[..., 4:5])  # Conf
+            p_cls = p[..., 5:85]
 
-                # Broadcasting only supported on first dimension in CoreML. See onnx-coreml/_operators.py
-                # p_cls = F.softmax(p_cls, 2) * p_conf  # SSD-like conf
-                p_cls = torch.exp(p_cls).permute(2, 1, 0)
-                p_cls = p_cls / p_cls.sum(0).unsqueeze(0) * p_conf.permute(2, 1, 0)  # F.softmax() equivalent
-                p_cls = p_cls.permute(2, 1, 0)
+            # Broadcasting only supported on first dimension in CoreML. See onnx-coreml/_operators.py
+            # p_cls = F.softmax(p_cls, 2) * p_conf  # SSD-like conf
+            p_cls = torch.exp(p_cls).permute(2, 1, 0)
+            p_cls = p_cls / p_cls.sum(0).unsqueeze(0) * p_conf.permute(2, 1, 0)  # F.softmax() equivalent
+            p_cls = p_cls.permute(2, 1, 0)
 
-                return torch.cat((xy / num_grids, width_height, p_conf, p_cls), 2).squeeze().t()
+            return torch.cat((xy / num_grids, width_height, p_conf, p_cls), 2).squeeze().t()
 
-            p[..., 0] = torch.sigmoid(p[..., 0]) + self.grid_x  # x
-            p[..., 1] = torch.sigmoid(p[..., 1]) + self.grid_y  # y
-            p[..., 2] = torch.exp(p[..., 2]) * self.anchor_w  # width
-            p[..., 3] = torch.exp(p[..., 3]) * self.anchor_h  # height
-            p[..., 4] = torch.sigmoid(p[..., 4])  # p_conf
-            p[..., :4] *= self.stride
+        p[..., 0] = torch.sigmoid(p[..., 0]) + self.grid_x  # x
+        p[..., 1] = torch.sigmoid(p[..., 1]) + self.grid_y  # y
+        p[..., 2] = torch.exp(p[..., 2]) * self.anchor_w  # width
+        p[..., 3] = torch.exp(p[..., 3]) * self.anchor_h  # height
+        p[..., 4] = torch.sigmoid(p[..., 4])  # p_conf
+        p[..., :4] *= self.stride
 
-            # reshape from [1, 3, 13, 13, 85] to [1, 507, 85]
-            return p.view(bs, -1, 5 + self.num_classes)
+        # reshape from [1, 3, 13, 13, 85] to [1, 507, 85]
+        return p.view(bs, -1, 5 + self.num_classes)
 
 
 class Darknet(nn.Module):
