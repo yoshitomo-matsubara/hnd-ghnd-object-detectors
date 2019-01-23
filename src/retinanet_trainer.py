@@ -111,10 +111,11 @@ def main(args):
     if device == 'cuda':
         cudnn.benchmark = True
 
-    log_util.setup_logging(os.path.join(args.log, args.model))
+    config_file_path = args.config
+    log_util.setup_logging(os.path.join(args.log, os.path.basename(config_file_path)))
     logging.info('CUDA is {}available'.format('' if torch.cuda.is_available() else 'not '))
     logging.info('Device: {}'.format(device))
-    config = yaml_util.load_yaml_file(args.config)
+    config = yaml_util.load_yaml_file(config_file_path)
     build_model(args, device, config)
 
 
