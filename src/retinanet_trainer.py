@@ -20,6 +20,7 @@ def get_args():
     argparser.add_argument('--config', required=True, help='yaml file path')
     argparser.add_argument('--epoch', type=int, help='epoch (higher priority than config if set)')
     argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
+    argparser.add_argument('--log', default='./log/', help='log dir path')
     argparser.add_argument('-init', action='store_true', help='overwrite checkpoint')
     argparser.add_argument('-eval', action='store_true', help='evaluation only (i.e. no training)')
     return argparser.parse_args()
