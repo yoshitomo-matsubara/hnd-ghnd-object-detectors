@@ -212,11 +212,13 @@ class RetinaNet(nn.Module):
         self.backbone = backbone
 
         if block == BasicBlock:
-            fpn_sizes = [self.layer2[layers[1]-1].conv2.out_channels, self.layer3[layers[2]-1].conv2.out_channels,
-                         self.layer4[layers[3]-1].conv2.out_channels]
+            fpn_sizes = [self.backbone.layer2[layers[1]-1].conv2.out_channels,
+                         self.backbone.layer3[layers[2]-1].conv2.out_channels,
+                         self.backbone.layer4[layers[3]-1].conv2.out_channels]
         elif block == Bottleneck:
-            fpn_sizes = [self.layer2[layers[1]-1].conv3.out_channels, self.layer3[layers[2]-1].conv3.out_channels,
-                         self.layer4[layers[3]-1].conv3.out_channels]
+            fpn_sizes = [self.backbone.layer2[layers[1]-1].conv3.out_channels,
+                         self.backbone.layer3[layers[2]-1].conv3.out_channels,
+                         self.backbone.layer4[layers[3]-1].conv3.out_channels]
 
         self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2])
 
