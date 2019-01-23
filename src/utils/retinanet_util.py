@@ -1,5 +1,6 @@
 import logging
 
+import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -12,8 +13,11 @@ from structure.transformers import Resizer, Augmenter, Normalizer
 from structure.transformers import collater
 
 
-def get_model(device, **kwargs):
+def get_model(device, ckpt_file_path, **kwargs):
     model = get_retinanet(**kwargs)
+    if file_util.check_if_exists(ckpt_file_path):
+        model.load_state_dict(torch.load(ckpt_file_path))
+
     model = model.to(device)
     model.training = True
     if device == 'cuda':

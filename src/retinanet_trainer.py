@@ -1,11 +1,12 @@
 import argparse
-import collections
 import logging
 import os
 
+import collections
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
+import torch.nn as nn
 import torch.optim as optim
 
 from myutils.common import file_util, log_util, yaml_util
@@ -20,6 +21,7 @@ def get_args():
     argparser.add_argument('--epoch', type=int, help='epoch (higher priority than config if set)')
     argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
     argparser.add_argument('-init', action='store_true', help='overwrite checkpoint')
+    argparser.add_argument('-eval', action='store_true', help='evaluation only (i.e. no training)')
     return argparser.parse_args()
 
 
@@ -56,9 +58,19 @@ def train(retinanet, train_dataloader, optimizer, loss_hist_list, epoch, num_log
     return epoch_loss_list
 
 
+def evaluate(val_dataset, model):
+    if isinstance(val_dataset, CocoDataset):
+        logging.info('Evaluating dataset')
+        eval_util.evaluate_coco(val_dataset, model)
+    elif isinstance(val_dataset, CSVDataset):
+        logging.info('Evaluating dataset')
+        meam_ap = eval_util.evaluate_csv(val_dataset, model)
+        logging.info('mAP: {}'.format(meam_ap))
+
+
 def save_ckpt(model, file_path):
     file_util.make_parent_dirs(file_path)
-    torch.save(model.state_dict(), file_path)
+    torch.save(model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(), file_path)
 
 
 def build_model(args, device, config):
@@ -67,16 +79,19 @@ def build_model(args, device, config):
     train_data_loader = retinanet_util.get_train_data_loader(train_dataset, train_config['batch_size'])
 
     model_config = config['model']
-    model = retinanet_util.get_model(device, **model_config['params'])
+    ckpt_file_path = model_config['ckpt']
+    model = retinanet_util.get_model(device, ckpt_file_path, **model_config['params'])
+    if args.eval:
+        evaluate(val_dataset, model)
+        return
+
     num_epochs = train_config['epoch'] if args.epoch is None else args.epoch
     num_logs = train_config['num_logs']
-
     optimizer_config = train_config['optimizer']
     optimizer = func_util.get_optimizer(model, optimizer_config['type'], optimizer_config['params'])
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
     loss_hist_list = collections.deque(maxlen=500)
 
-    ckpt_file_path = model_config['ckpt']
     model.train()
     model.module.freeze_bn()
     logging.info('Num training images: {}'.format(len(train_dataset)))
@@ -85,14 +100,7 @@ def build_model(args, device, config):
         if val_dataset is None:
             continue
 
-        if isinstance(val_dataset, CocoDataset):
-            logging.info('Evaluating dataset')
-            eval_util.evaluate_coco(val_dataset, model)
-        elif isinstance(val_dataset, CSVDataset):
-            logging.info('Evaluating dataset')
-            meam_ap = eval_util.evaluate_csv(val_dataset, model)
-            logging.info('mAP: {}'.format(meam_ap))
-
+        evaluate(val_dataset, model)
         scheduler.step(np.mean(epoch_losses))
         save_ckpt(model, ckpt_file_path)
 
