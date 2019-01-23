@@ -28,7 +28,7 @@ def get_model(device, ckpt_file_path, **kwargs):
 def get_datasets(dataset_config):
     dataset_name = dataset_config['name']
     data_config = dataset_config['data']
-    if dataset_name == 'coco':
+    if dataset_name.startswith('coco'):
         train_data_config = data_config['train']
         train_dataset = CocoDataset(train_data_config['annotation'], train_data_config['img_dir'],
                                     transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
