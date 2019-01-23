@@ -11,6 +11,8 @@ dataset:
             annotation: !join [*annot_prefix, 'val2017.json']
             img_dir: !join [*img_prefix, 'val2017/']
 
+input_shape: [3, 640, 640]
+
 teacher_model:
     config: './config/retinanet50.yaml'
     extract_designed_module: False
@@ -21,7 +23,7 @@ student_model:
     type: &smodel_type 'retinanet50_head_mimic'
     version: &ver '1'
     experiment: &distill_experiment !join [*dataset_name, '-', *smodel_type, '-ver', *ver]
-    ckpt: !join ['./resource/ckpt/mimic/', *distill_experiment, '.ckpt']
+    ckpt: !join ['./resource/ckpt/mimic/', *distill_experiment, '.pt']
 
 mimic_model:
     type: &mmodel_type 'retinanet50_mimic'

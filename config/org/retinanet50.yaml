@@ -11,10 +11,12 @@ dataset:
             annotation: !join [*annot_prefix, 'val2017.json']
             img_dir: !join [*img_prefix, 'val2017/']
 
+input_shape: [3, 640, 640]
+
 model:
     type: &model_type 'retinanet50'
     experiment: &experiment !join [*dataset_name, '-', *model_type]
-    ckpt: !join ['./resource/ckpt/', *experiment, '.ckpt']
+    ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
     params:
         depth: 50
         num_classes: 101
