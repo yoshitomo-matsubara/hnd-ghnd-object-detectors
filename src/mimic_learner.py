@@ -16,6 +16,7 @@ def get_argparser():
     argparser.add_argument('--config', required=True, help='yaml file path')
     argparser.add_argument('--epoch', type=int, help='epoch (higher priority than config if set)')
     argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
+    argparser.add_argument('--log', default='./log/', help='log dir path')
     argparser.add_argument('-init', action='store_true', help='initialize checkpoint')
     return argparser
 
@@ -81,10 +82,11 @@ def main(args):
     if device == 'cuda':
         cudnn.benchmark = True
 
-    log_util.setup_logging(os.path.join(args.log, args.model))
+    config_file_path = args.config
+    log_util.setup_logging(os.path.join(args.log, os.path.basename(config_file_path)))
     logging.info('CUDA is {}available'.format('' if torch.cuda.is_available() else 'not '))
     logging.info('Device: {}'.format(device))
-    config = yaml_util.load_yaml_file(args.config)
+    config = yaml_util.load_yaml_file(config_file_path)
     input_shape = config['input_shape']
     teacher_model_config = config['teacher_model']
     teacher_model, teacher_model_type = mimic_util.get_teacher_model(teacher_model_config, input_shape, device)
