@@ -70,14 +70,14 @@ class CocoDataset(Dataset):
 
         # parse annotations
         coco_annotations = self.coco.loadAnns(annotations_ids)
-        for idx, annotation in enumerate(coco_annotations):
+        for idx, annotation_dict in enumerate(coco_annotations):
             # some annotations have basically no width / height, skip them
-            if annotation['bbox'][2] < 1 or annotation['bbox'][3] < 1:
+            if annotation_dict['bbox'][2] < 1 or annotation_dict['bbox'][3] < 1:
                 continue
 
             annotation = np.zeros((1, 5))
-            annotation[0, :4] = annotation['bbox']
-            annotation[0, 4] = self.coco_label_to_label(annotation['category_id'])
+            annotation[0, :4] = annotation_dict['bbox']
+            annotation[0, 4] = self.coco_label_to_label(annotation_dict['category_id'])
             annotations = np.append(annotations, annotation, axis=0)
 
         # transform from [x, y, w, h] to [x1, y1, x2, y2]
