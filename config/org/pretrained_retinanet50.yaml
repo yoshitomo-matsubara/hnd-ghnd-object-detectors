@@ -15,7 +15,7 @@ input_shape: [3, 640, 640]
 
 model:
     type: &model_type 'retinanet50'
-    experiment: &experiment !join ['coco_resnet_50_map_0_335_state_dict.pt']
+    experiment: &experiment 'coco_resnet_50_map_0_335_state_dict'
     ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
     params:
         depth: 50
