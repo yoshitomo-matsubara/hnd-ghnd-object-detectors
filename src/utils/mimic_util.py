@@ -28,8 +28,7 @@ def resume_from_ckpt(ckpt_file_path, model, is_student=False):
 
 def extract_teacher_model(model, input_shape, device, teacher_model_config):
     modules = list()
-    target_model = model.module if isinstance(model, nn.DataParallel) else model
-    module_util.extract_decomposable_modules(target_model, torch.rand(1, *input_shape).to(device), modules)
+    module_util.extract_decomposable_modules(model, torch.rand(1, *input_shape).to(device), modules)
     start_idx = teacher_model_config['start_idx']
     end_idx = teacher_model_config['end_idx']
     if start_idx > 0:
@@ -43,8 +42,9 @@ def get_teacher_model(teacher_model_config, input_shape, device):
     teacher_config = yaml_util.load_yaml_file(teacher_model_config['config'])
     model = model_util.get_model(teacher_config, device)
     model_config = teacher_config['model']
-    resume_from_ckpt(model_config['ckpt'], model)
-    return extract_teacher_model(model.backbone, input_shape, device, teacher_model_config), model_config['type']
+    target_model = model.module if isinstance(model, nn.DataParallel) else model
+    resume_from_ckpt(model_config['ckpt'], target_model)
+    return extract_teacher_model(target_model.backbone, input_shape, device, teacher_model_config), model_config['type']
 
 
 def get_student_model(teacher_model_type, student_model_config):
