@@ -19,6 +19,10 @@ def resume_from_ckpt(ckpt_file_path, model, is_student=False):
 
     logging.info('Resuming from checkpoint..')
     checkpoint = torch.load(ckpt_file_path)
+    if 'model' not in checkpoint or 'epoch' not in checkpoint:
+        model.load_state_dict(checkpoint)
+        return None
+
     state_dict = checkpoint['model']
     model.load_state_dict(state_dict)
     start_epoch = checkpoint['epoch']
