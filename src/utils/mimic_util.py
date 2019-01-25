@@ -28,7 +28,8 @@ def resume_from_ckpt(ckpt_file_path, model, is_student=False):
 
 def extract_teacher_model(model, input_shape, device, teacher_model_config):
     modules = list()
-    module_util.extract_decomposable_modules(model, torch.rand(1, *input_shape).to(device), modules)
+    target_model = model.module if isinstance(model, nn.DataParallel) else model
+    module_util.extract_decomposable_modules(target_model, torch.rand(1, *input_shape).to(device), modules)
     start_idx = teacher_model_config['start_idx']
     end_idx = teacher_model_config['end_idx']
     if start_idx > 0:
