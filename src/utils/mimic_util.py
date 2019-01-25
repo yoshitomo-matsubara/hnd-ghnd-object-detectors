@@ -48,10 +48,9 @@ def get_teacher_model(teacher_model_config, input_shape, device):
     model = model_util.get_model(teacher_config, device)
     model_config = teacher_config['model']
     target_model = model.module if isinstance(model, nn.DataParallel) else model
-    teacher_model = extract_teacher_model(target_model.backbone, input_shape, device,
-                                          teacher_model_config), model_config['type']
+    teacher_model = extract_teacher_model(target_model.backbone, input_shape, device, teacher_model_config)
     module_util.freeze_module_params(teacher_model)
-    return teacher_model
+    return teacher_model, model_config['type']
 
 
 def get_student_model(teacher_model_type, student_model_config):
