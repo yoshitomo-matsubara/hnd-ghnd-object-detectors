@@ -1,4 +1,5 @@
 import logging
+import os
 
 import torch
 import torch.nn as nn
@@ -13,10 +14,29 @@ from structure.transformers import Resizer, Augmenter, Normalizer
 from structure.transformers import collater
 
 
+def load_published_pretrained_state_dict(ckpt_file_path):
+    # load pretrained state dict published in https://github.com/yhenon/pytorch-retinanet
+    state_dict = torch.load(ckpt_file_path)
+    keys = list(state_dict.keys())
+    for key in keys:
+        if key.startswith('layer') or key == 'conv1.weight' or key.startswith('bn1.'):
+            state_dict['backbone.' + key] = state_dict.pop(key)
+        elif key.startswith('regressionModel'):
+            state_dict[key.replace('regressionModel', 'regressor')] = state_dict.pop(key)
+        elif key.startswith('classificationModel'):
+            state_dict[key.replace('classificationModel', 'classifier')] = state_dict.pop(key)
+        elif key.startswith('fpn.'):
+            state_dict[key.lower()] = state_dict.pop(key)
+    return state_dict
+
+
 def get_model(device, ckpt_file_path, **kwargs):
     model = get_retinanet(**kwargs)
     if file_util.check_if_exists(ckpt_file_path):
-        model.load_state_dict(torch.load(ckpt_file_path))
+        state_dict = load_published_pretrained_state_dict(ckpt_file_path)\
+            if os.path.basename(ckpt_file_path) == 'coco_resnet_50_map_0_335_state_dict.pt'\
+            else torch.load(ckpt_file_path)
+        model.load_state_dict(state_dict)
 
     model = model.to(device)
     model.training = True
