@@ -25,7 +25,7 @@ def train(student_model, teacher_model, train_loader, optimizer, criterion, epoc
     logging.info('\nEpoch: %d' % epoch)
     student_model.train()
     teacher_model.eval()
-    num_samples = len(train_loader.sampler)
+    num_samples = len(train_loader.dataset)
     num_batches = len(train_loader)
     train_loss = 0
     total = 0
