@@ -14,7 +14,7 @@ dataset:
 input_shape: [3, 640, 640]
 
 teacher_model:
-    config: './config/pretrained_retinanet50.yaml'
+    config: './config/org/pretrained_retinanet50.yaml'
     extract_designed_module: False
     start_idx: 0
     end_idx: 11 # 11, 17, 20 for vers. 1, 2, 3
