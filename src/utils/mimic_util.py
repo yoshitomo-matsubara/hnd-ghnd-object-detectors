@@ -33,8 +33,7 @@ def extract_teacher_model(model, input_shape, device, teacher_model_config):
     end_idx = teacher_model_config['end_idx']
     if start_idx > 0:
         frozen_module = nn.Sequential(*modules[:start_idx])
-        for param in frozen_module.parameters():
-            param.requires_grad = False
+        module_util.freeze_module_params(frozen_module)
         return nn.Sequential(frozen_module, *modules[start_idx:end_idx])
     return nn.Sequential(*modules[start_idx:end_idx])
 
