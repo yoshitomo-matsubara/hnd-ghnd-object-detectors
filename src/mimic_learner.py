@@ -97,9 +97,8 @@ def main(args):
     start_epoch, best_avg_loss = mimic_util.resume_from_ckpt(student_model_config['ckpt'], student_model,
                                                              is_student=True)
     train_config = config['train']
-    dataset_config = config['dataset']
     train_loader, val_loader =\
-        model_util.get_data_loaders(dataset_config['data'], teacher_model_type, batch_size=train_config['batch_size'])
+        model_util.get_data_loaders(config['dataset'], teacher_model_type, batch_size=train_config['batch_size'])
     criterion_config = train_config['criterion']
     criterion = func_util.get_loss(criterion_config['type'], criterion_config['params'])
     optim_config = train_config['optimizer']
