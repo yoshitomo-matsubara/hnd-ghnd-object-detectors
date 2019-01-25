@@ -26,7 +26,7 @@ def get_args():
     return argparser.parse_args()
 
 
-def train(retinanet, train_dataloader, optimizer, loss_hist_list, epoch, num_logs):
+def train(retinanet, train_dataloader, optimizer, loss_hist_list, device, epoch, num_logs):
     retinanet.train()
     retinanet.module.freeze_bn()
     epoch_loss_list = list()
@@ -35,7 +35,7 @@ def train(retinanet, train_dataloader, optimizer, loss_hist_list, epoch, num_log
     for i, data in enumerate(train_dataloader):
         try:
             optimizer.zero_grad()
-            classification_losses, regression_losses = retinanet([data['img'].cuda().float(), data['annot']])
+            classification_losses, regression_losses = retinanet([data['img'].to(device).float(), data['annot']])
             classification_loss = classification_losses.mean()
             regression_loss = regression_losses.mean()
             loss = classification_loss + regression_loss
@@ -97,7 +97,7 @@ def build_model(args, device, config):
     model.module.freeze_bn()
     logging.info('Num training images: {}'.format(len(train_dataset)))
     for epoch in range(num_epochs):
-        epoch_losses = train(model, train_data_loader, optimizer, loss_hist_list, epoch, num_logs)
+        epoch_losses = train(model, train_data_loader, optimizer, loss_hist_list, device, epoch, num_logs)
         if val_dataset is None:
             continue
 

@@ -29,20 +29,21 @@ def train(student_model, teacher_model, train_loader, optimizer, criterion, epoc
     num_batches = len(train_loader)
     train_loss = 0
     total = 0
-    for batch_idx, (inputs, targets) in enumerate(train_loader):
-        inputs, targets = inputs.to(device), targets.to(device)
+    for batch_idx, inputs in enumerate(train_loader):
         optimizer.zero_grad()
+        inputs = inputs['img'].to(device).float()
         student_outputs = student_model(inputs)
         teacher_outputs = teacher_model(inputs)
         loss = criterion(student_outputs, teacher_outputs)
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
-        total += targets.size(0)
+        batch_size = inputs.size(0)
+        total += batch_size
         if batch_idx > 0 and batch_idx % interval == 0:
             logging.info('[{}/{} ({:.0f}%)]\tAvg Loss: {:.6f}'.format(batch_idx * len(inputs), num_samples,
                                                                       100.0 * batch_idx / num_batches,
-                                                                      loss.item() / targets.size(0)))
+                                                                      loss.item() / batch_size))
 
 
 def validate(student_model, teacher_model, val_loader, criterion, device):
@@ -51,13 +52,13 @@ def validate(student_model, teacher_model, val_loader, criterion, device):
     val_loss = 0
     total = 0
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(val_loader):
-            inputs, targets = inputs.to(device), targets.to(device)
+        for batch_idx, inputs in enumerate(val_loader):
+            inputs = inputs['img'].to(device).float()
             student_outputs = student_model(inputs)
             teacher_outputs = teacher_model(inputs)
             loss = criterion(student_outputs, teacher_outputs)
             val_loss += loss.item()
-            total += targets.size(0)
+            total += inputs.size(0)
 
     avg_val_loss = val_loss / total
     logging.info('Validation Loss: {:.6f}\tAvg Loss: {:.6f}'.format(val_loss, avg_val_loss))
