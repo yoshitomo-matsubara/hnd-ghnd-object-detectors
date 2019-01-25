@@ -9,7 +9,6 @@ from models.lib.nms.pth_nms import pth_nms
 from structure import losses
 from structure.anchors import Anchors
 from structure.transformers import BBoxTransform, ClipBoxes
-# from org.utils import BasicBlock, Bottleneck
 
 MODEL_URL_DICT = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -135,7 +134,7 @@ class ClassificationModel(nn.Module):
         self.conv4 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
         self.act4 = nn.ReLU()
 
-        self.output = nn.Conv2d(feature_size, num_anchors*num_classes, kernel_size=3, padding=1)
+        self.output = nn.Conv2d(feature_size, num_anchors * num_classes, kernel_size=3, padding=1)
         self.output_act = nn.Sigmoid()
 
     def forward(self, x):
