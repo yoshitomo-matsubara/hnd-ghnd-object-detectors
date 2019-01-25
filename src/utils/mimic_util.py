@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import torch
 
@@ -49,9 +50,10 @@ def get_teacher_model(teacher_model_config, input_shape, device):
 
 def get_student_model(teacher_model_type, student_model_config):
     student_model_type = student_model_config['type']
-    if teacher_model_type.startswith('retinanet') and student_model_type == 'retinanet_head_mimic':
+    if teacher_model_type.startswith('retinanet') and re.search(r'^retinanet.*_mimic', student_model_type):
         return RetinaNetHeadMimic(teacher_model_type, student_model_config['version'])
-    raise ValueError('teacher_model_type `{}` is not expected'.format(teacher_model_type))
+    raise ValueError('teacher_model_type `{}` and/or '
+                     'student_model_type `{}` are not expected'.format(teacher_model_type, student_model_type))
 
 
 def load_student_model(student_config, teacher_model_type, device):
