@@ -19,7 +19,7 @@ def mimic_version1(make_bottleneck=False):
             nn.Conv2d(64, 128, kernel_size=2, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 256, kernel_size=2, stride=1, padding=1, bias=False),
+            nn.Conv2d(128, 256, kernel_size=2, stride=1, bias=False),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 512, kernel_size=2, stride=1, bias=False),
@@ -82,7 +82,6 @@ def mimic_version3(teacher_model_type, make_bottleneck=False):
 
 
 class RetinaNetHeadMimic(BaseHeadMimic):
-    # designed for input image size [3, 224, 224]
     def __init__(self, teacher_model_type, version):
         super().__init__()
         self.extractor = nn.Sequential(

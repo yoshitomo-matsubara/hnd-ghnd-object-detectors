@@ -52,8 +52,8 @@ def validate(student_model, teacher_model, val_loader, criterion, device):
     val_loss = 0
     total = 0
     with torch.no_grad():
-        for batch_idx, inputs in enumerate(val_loader):
-            inputs = inputs['img'].to(device).float()
+        for inputs in val_loader.dataset:
+            inputs = inputs['img'].permute(2, 0, 1).to(device).float().unsqueeze(dim=0)
             student_outputs = student_model(inputs)
             teacher_outputs = teacher_model(inputs)
             loss = criterion(student_outputs, teacher_outputs)
