@@ -42,6 +42,7 @@ train:
         type: 'MSELoss'
         params:
             reduction: 'sum'
+    log: !join ['./log/mimic/', *mimic_experiment, '.txt']
 
 test:
     batch_size: 1

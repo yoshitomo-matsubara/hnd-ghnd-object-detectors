@@ -83,11 +83,11 @@ def main(args):
     if device == 'cuda':
         cudnn.benchmark = True
 
-    config_file_path = args.config
-    log_util.setup_logging(os.path.join(args.log, os.path.basename(config_file_path)))
+    config = yaml_util.load_yaml_file(args.config)
+    train_config = config['train']
+    log_util.setup_logging(train_config['log'])
     logging.info('CUDA is {}available'.format('' if torch.cuda.is_available() else 'not '))
     logging.info('Device: {}'.format(device))
-    config = yaml_util.load_yaml_file(config_file_path)
     input_shape = config['input_shape']
     teacher_model_config = config['teacher_model']
     teacher_model, teacher_model_type = mimic_util.get_teacher_model(teacher_model_config, input_shape, device)
@@ -96,7 +96,6 @@ def main(args):
     student_model = student_model.to(device)
     start_epoch, best_avg_loss = mimic_util.resume_from_ckpt(student_model_config['ckpt'], student_model,
                                                              is_student=True)
-    train_config = config['train']
     train_loader, val_loader =\
         model_util.get_data_loaders(config['dataset'], teacher_model_type, batch_size=train_config['batch_size'])
     criterion_config = train_config['criterion']

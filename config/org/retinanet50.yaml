@@ -30,6 +30,7 @@ train:
         type: 'adam'
         params:
             lr: 0.00001
+    log: !join ['./log/org/', *experiment, '.txt']
 
 test:
     batch_size: 1
