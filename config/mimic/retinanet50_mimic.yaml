@@ -31,8 +31,8 @@ mimic_model:
     ckpt: !join ['./resource/model/mimic/', *mimic_experiment, '.pkl']
 
 train:
-    epoch: 100
-    batch_size: 20
+    epoch: 30
+    batch_size: 2
     interval: 50
     optimizer:
         type: 'Adam'
