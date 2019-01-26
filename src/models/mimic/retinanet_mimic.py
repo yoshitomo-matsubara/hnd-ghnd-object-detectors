@@ -34,7 +34,7 @@ def mimic_version1(make_bottleneck=False):
         nn.Conv2d(128, 256, kernel_size=2, stride=1, padding=1, bias=False),
         nn.BatchNorm2d(256),
         nn.ReLU(inplace=True),
-        nn.Conv2d(256, 512, kernel_size=2, stride=1, padding=1, bias=False),
+        nn.Conv2d(256, 512, kernel_size=2, stride=1, bias=False),
         nn.AvgPool2d(kernel_size=2, stride=2)
     )
 
