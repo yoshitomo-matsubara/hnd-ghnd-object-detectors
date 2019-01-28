@@ -25,13 +25,13 @@ def get_args():
     return argparser.parse_args()
 
 
-def train(retinanet, train_dataloader, optimizer, loss_hist_list, device, epoch, num_logs):
+def train(retinanet, train_data_loader, optimizer, loss_hist_list, device, epoch, num_logs):
     retinanet.train()
     retinanet.module.freeze_bn()
     epoch_loss_list = list()
-    num_batches = len(train_dataloader)
+    num_batches = len(train_data_loader)
     unit_size = num_batches // num_logs
-    for i, data in enumerate(train_dataloader):
+    for i, data in enumerate(train_data_loader):
         try:
             optimizer.zero_grad()
             classification_losses, regression_losses = retinanet([data['img'].to(device).float(), data['annot']])
