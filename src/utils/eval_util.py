@@ -18,13 +18,15 @@ def calc_iou(a, b):
     return iou
 
 
-def evaluate_coco(dataset, model, threshold=0.05):
+def evaluate_coco(dataset, model, threshold=0.05, log_size=100):
     model.eval()
     with torch.no_grad():
         # start collecting results
         results = []
         image_ids = []
-        for index in range(len(dataset)):
+        num_samples = len(dataset)
+        unit_size = num_samples // log_size
+        for index in range(num_samples):
             data = dataset[index]
             scale = data['scale']
 
@@ -67,8 +69,9 @@ def evaluate_coco(dataset, model, threshold=0.05):
             # append image to list of processed images
             image_ids.append(dataset.image_ids[index])
 
-            # print progress
-            print('{}/{}'.format(index, len(dataset)), end='\r')
+            if (index + 1) % unit_size == 0:
+                # print progress
+                print('{}/{}'.format(index + 1, num_samples), end='\r')
 
         if not len(results):
             return
