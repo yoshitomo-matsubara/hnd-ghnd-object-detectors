@@ -12,6 +12,7 @@ from structure.datasets import CocoDataset, CSVDataset
 from structure.samplers import AspectRatioBasedSampler
 from structure.transformers import Resizer, Augmenter, Normalizer
 from structure.transformers import collater
+from utils import eval_util
 
 
 def load_published_pretrained_state_dict(ckpt_file_path):
@@ -74,3 +75,15 @@ def get_datasets(dataset_config):
 def get_train_data_loader(train_dataset, batch_size=2, drop_last=False, num_workers=3):
     train_sampler = AspectRatioBasedSampler(train_dataset, batch_size=batch_size, drop_last=drop_last)
     return DataLoader(train_dataset, num_workers=num_workers, collate_fn=collater, batch_sampler=train_sampler)
+
+
+def evaluate(dataset, model):
+    if isinstance(dataset, CocoDataset):
+        logging.info('Evaluating dataset')
+        eval_util.evaluate_coco(dataset, model)
+    elif isinstance(dataset, CSVDataset):
+        logging.info('Evaluating dataset')
+        meam_ap = eval_util.evaluate_csv(dataset, model)
+        logging.info('mAP: {}'.format(meam_ap))
+    else:
+        raise ValueError('type of dataset `{}` is not expected'.format(type(dataset)))

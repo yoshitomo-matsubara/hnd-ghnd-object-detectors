@@ -1,8 +1,8 @@
 import argparse
+import collections
 import logging
 import os
 
-import collections
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -11,8 +11,7 @@ import torch.optim as optim
 
 from myutils.common import file_util, log_util, yaml_util
 from myutils.pytorch import func_util
-from structure.datasets import CocoDataset, CSVDataset
-from utils import eval_util, retinanet_util
+from utils import retinanet_util
 
 
 def get_args():
@@ -59,16 +58,6 @@ def train(retinanet, train_dataloader, optimizer, loss_hist_list, device, epoch,
     return epoch_loss_list
 
 
-def evaluate(val_dataset, model):
-    if isinstance(val_dataset, CocoDataset):
-        logging.info('Evaluating dataset')
-        eval_util.evaluate_coco(val_dataset, model)
-    elif isinstance(val_dataset, CSVDataset):
-        logging.info('Evaluating dataset')
-        meam_ap = eval_util.evaluate_csv(val_dataset, model)
-        logging.info('mAP: {}'.format(meam_ap))
-
-
 def save_ckpt(model, file_path):
     file_util.make_parent_dirs(file_path)
     torch.save(model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(), file_path)
@@ -83,7 +72,7 @@ def build_model(args, device, config):
     ckpt_file_path = model_config['ckpt']
     model = retinanet_util.get_model(device, ckpt_file_path, **model_config['params'])
     if args.eval:
-        evaluate(val_dataset, model)
+        retinanet_util.evaluate(val_dataset, model)
         return
 
     num_epochs = train_config['epoch'] if args.epoch is None else args.epoch
@@ -101,7 +90,7 @@ def build_model(args, device, config):
         if val_dataset is None:
             continue
 
-        evaluate(val_dataset, model)
+        retinanet_util.evaluate(val_dataset, model)
         scheduler.step(np.mean(epoch_losses))
         save_ckpt(model, ckpt_file_path)
 
