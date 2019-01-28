@@ -12,7 +12,7 @@ from utils import mimic_util, model_util
 
 
 def get_argparser():
-    argparser = argparse.ArgumentParser(description='Mimic Learner')
+    argparser = argparse.ArgumentParser(description='Mimic Trainer')
     argparser.add_argument('--config', required=True, help='yaml file path')
     argparser.add_argument('--epoch', type=int, help='epoch (higher priority than config if set)')
     argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
