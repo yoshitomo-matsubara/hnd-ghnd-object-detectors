@@ -46,4 +46,7 @@ train:
 
 test:
     batch_size: 1
+    result:
+        org: !join ['./result/', *mimic_experiment, '-org-test.json']
+        mimic: !join ['./result/', *mimic_experiment, '-mimic-test.json']
     log: !join ['./log/mimic/', *mimic_experiment, '-test.txt']
