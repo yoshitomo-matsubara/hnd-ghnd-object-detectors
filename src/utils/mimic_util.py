@@ -88,12 +88,13 @@ def get_mimic_model(config, org_model, teacher_model_type, teacher_model_config,
     student_model = load_student_model(config, teacher_model_type, device)
     org_modules = list()
     input_batch = torch.rand(config['input_shape']).unsqueeze(0).to(device)
-    module_util.extract_decomposable_modules(org_model.backbone, input_batch, org_modules)
+    target_model = org_model.module if isinstance(org_model, nn.DataParallel) else org_model
+    module_util.extract_decomposable_modules(target_model.backbone, input_batch, org_modules)
     end_idx = teacher_model_config['end_idx']
     mimic_modules = [student_model]
     mimic_modules.extend(org_modules[end_idx:])
     mimic_model_config = config['mimic_model']
     mimic_type = mimic_model_config['type']
     if mimic_type.startswith('retinanet'):
-        return RetinaNetMimic(org_model, mimic_modules)
+        return RetinaNetMimic(target_model, mimic_modules)
     raise ValueError('mimic_type `{}` is not expected'.format(mimic_type))
