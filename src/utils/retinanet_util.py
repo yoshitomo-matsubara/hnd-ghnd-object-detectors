@@ -79,10 +79,10 @@ def get_train_data_loader(train_dataset, batch_size=2, drop_last=False, num_work
 
 def evaluate(dataset, model):
     if isinstance(dataset, CocoDataset):
-        logging.info('Evaluating COCO dataset')
+        logging.info('Using COCO dataset')
         return eval_util.evaluate_coco(dataset, model)
     elif isinstance(dataset, CSVDataset):
-        logging.info('Evaluating CSV dataset')
+        logging.info('Using CSV dataset')
         mean_ap = eval_util.evaluate_csv(dataset, model)
         logging.info('mAP: {}'.format(mean_ap))
         return mean_ap
