@@ -2,6 +2,7 @@ import argparse
 import logging
 
 import torch
+import torch.nn as nn
 import torch.backends.cudnn as cudnn
 
 from myutils.common import file_util, log_util, yaml_util
@@ -16,10 +17,11 @@ def get_argparser():
 
 
 def save_ckpt(student_model, epoch, best_avg_loss, ckpt_file_path, teacher_model_type):
+    target_model = student_model.module if isinstance(student_model, nn.DataParallel) else student_model
     logging.info('Saving..')
     state = {
         'type': teacher_model_type,
-        'model': student_model.state_dict(),
+        'model': target_model.state_dict(),
         'epoch': epoch + 1,
         'best_avg_loss': best_avg_loss,
         'student': True

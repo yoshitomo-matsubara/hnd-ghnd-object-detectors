@@ -73,7 +73,6 @@ def get_org_model(teacher_model_config, device):
     teacher_config = yaml_util.load_yaml_file(teacher_model_config['config'])
     model = model_util.get_model(teacher_config, device)
     model_config = teacher_config['model']
-    resume_from_ckpt(model_config['ckpt'], model)
     return model, model_config['type']
 
 
