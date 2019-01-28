@@ -4,8 +4,7 @@ import logging
 import torch
 import torch.backends.cudnn as cudnn
 
-from myutils.common import file_util, yaml_util
-from myutils.common import log_util
+from myutils.common import file_util, log_util, yaml_util
 from myutils.pytorch import func_util
 from utils import mimic_util, model_util
 
