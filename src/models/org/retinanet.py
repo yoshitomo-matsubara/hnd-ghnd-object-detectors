@@ -279,9 +279,9 @@ class RetinaNet(nn.Module):
             img_batch = inputs
             annotations = None
 
-        batch_shape = img_batch.shape
-        anchors = self.anchors(img_batch)
         x2, x3, x4 = self.backbone(img_batch)
+        anchors = self.anchors(img_batch)
+        batch_shape = img_batch.shape
         return self.detect(x2, x3, x4, anchors, annotations, batch_shape)
 
 
