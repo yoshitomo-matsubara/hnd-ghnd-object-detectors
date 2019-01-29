@@ -116,9 +116,9 @@ class RetinaNetBackboneMimic(nn.Module):
             # RetinaNet-50
             layer2_end_idx = 11 - diff_length
             layer3_end_idx = 17 - diff_length
-            self.layer2 = nn.Sequential(tail_modules[:layer2_end_idx])
-            self.layer3 = nn.Sequential(tail_modules[layer2_end_idx:layer3_end_idx])
-            self.layer4 = nn.Sequential(tail_modules[layer3_end_idx:])
+            self.layer2 = nn.Sequential(*tail_modules[:layer2_end_idx])
+            self.layer3 = nn.Sequential(*tail_modules[layer2_end_idx:layer3_end_idx])
+            self.layer4 = nn.Sequential(*tail_modules[layer3_end_idx:])
         else:
             raise ValueError('org_length `{}` is not expected'.format(org_length))
 
