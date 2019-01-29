@@ -32,12 +32,11 @@ def save_ckpt(student_model, epoch, best_avg_loss, ckpt_file_path, teacher_model
 
 def evaluate(org_model, mimic_model, teacher_model_type, config):
     if teacher_model_type.startswith('retinanet'):
+        _, val_dataset = retinanet_util.get_datasets(config['dataset'])
         result_config = config['test']['result']
         logging.info('Evaluating original model')
-        _, val_dataset = retinanet_util.get_datasets(config['dataset'])
         retinanet_util.evaluate(val_dataset, org_model, result_config['org'])
         logging.info('Evaluating mimic model')
-        _, val_dataset = retinanet_util.get_datasets(config['dataset'])
         retinanet_util.evaluate(val_dataset, mimic_model, result_config['mimic'])
     else:
         raise ValueError('teacher_model_type `{}` is not expected'.format(teacher_model_type))
