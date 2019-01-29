@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from pycocotools.cocoeval import COCOeval
 
+from myutils.common import file_util
+
 
 def calc_iou(a, b):
     area = (b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])
@@ -18,13 +20,16 @@ def calc_iou(a, b):
     return iou
 
 
-def evaluate_coco(dataset, model, threshold=0.05):
+def evaluate_coco(dataset, model, output_file_path, threshold=0.05, log_size=100):
+    file_util.make_parent_dirs(output_file_path)
     model.eval()
     with torch.no_grad():
         # start collecting results
         results = []
         image_ids = []
-        for index in range(len(dataset)):
+        num_samples = len(dataset)
+        unit_size = num_samples // log_size
+        for index in range(num_samples):
             data = dataset[index]
             scale = data['scale']
 
@@ -67,18 +72,19 @@ def evaluate_coco(dataset, model, threshold=0.05):
             # append image to list of processed images
             image_ids.append(dataset.image_ids[index])
 
-            # print progress
-            print('{}/{}'.format(index, len(dataset)), end='\r')
+            if (index + 1) % unit_size == 0:
+                # print progress
+                print('{}/{}'.format(index + 1, num_samples), end='\r')
 
         if not len(results):
             return
 
         # write output
-        json.dump(results, open('{}_bbox_results.json'.format(dataset.set_name), 'w'), indent=4)
+        json.dump(results, open(output_file_path, 'w'), indent=4)
 
         # load results in COCO evaluation tool
         coco_true = dataset.coco
-        coco_pred = coco_true.loadRes('{}_bbox_results.json'.format(dataset.set_name))
+        coco_pred = coco_true.loadRes(output_file_path)
 
         # run COCO evaluation
         coco_eval = COCOeval(coco_true, coco_pred, 'bbox')

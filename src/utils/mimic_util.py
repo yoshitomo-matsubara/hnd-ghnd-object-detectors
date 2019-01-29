@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import torch
 
@@ -18,6 +19,10 @@ def resume_from_ckpt(ckpt_file_path, model, is_student=False):
 
     logging.info('Resuming from checkpoint..')
     checkpoint = torch.load(ckpt_file_path)
+    if 'model' not in checkpoint or 'epoch' not in checkpoint:
+        model.load_state_dict(checkpoint)
+        return None
+
     state_dict = checkpoint['model']
     model.load_state_dict(state_dict)
     start_epoch = checkpoint['epoch']
@@ -33,8 +38,7 @@ def extract_teacher_model(model, input_shape, device, teacher_model_config):
     end_idx = teacher_model_config['end_idx']
     if start_idx > 0:
         frozen_module = nn.Sequential(*modules[:start_idx])
-        for param in frozen_module.parameters():
-            param.requires_grad = False
+        module_util.freeze_module_params(frozen_module)
         return nn.Sequential(frozen_module, *modules[start_idx:end_idx])
     return nn.Sequential(*modules[start_idx:end_idx])
 
@@ -43,15 +47,18 @@ def get_teacher_model(teacher_model_config, input_shape, device):
     teacher_config = yaml_util.load_yaml_file(teacher_model_config['config'])
     model = model_util.get_model(teacher_config, device)
     model_config = teacher_config['model']
-    resume_from_ckpt(model_config['ckpt'], model)
-    return extract_teacher_model(model.backbone, input_shape, device, teacher_model_config), model_config['type']
+    target_model = model.module if isinstance(model, nn.DataParallel) else model
+    teacher_model = extract_teacher_model(target_model.backbone, input_shape, device, teacher_model_config)
+    module_util.freeze_module_params(teacher_model)
+    return teacher_model, model_config['type']
 
 
 def get_student_model(teacher_model_type, student_model_config):
     student_model_type = student_model_config['type']
-    if teacher_model_type.startswith('retinanet') and student_model_type == 'retinanet_head_mimic':
-        return RetinaNetHeadMimic(student_model_config['version'])
-    raise ValueError('teacher_model_type `{}` is not expected'.format(teacher_model_type))
+    if teacher_model_type.startswith('retinanet') and re.search(r'^retinanet.*_mimic', student_model_type):
+        return RetinaNetHeadMimic(teacher_model_type, student_model_config['version'])
+    raise ValueError('teacher_model_type `{}` and/or '
+                     'student_model_type `{}` are not expected'.format(teacher_model_type, student_model_type))
 
 
 def load_student_model(student_config, teacher_model_type, device):
@@ -64,12 +71,8 @@ def load_student_model(student_config, teacher_model_type, device):
 
 def get_org_model(teacher_model_config, device):
     teacher_config = yaml_util.load_yaml_file(teacher_model_config['config'])
-    if teacher_config['model']['type'] == 'inception_v3':
-        teacher_config['model']['params']['aux_logits'] = False
-
     model = model_util.get_model(teacher_config, device)
     model_config = teacher_config['model']
-    resume_from_ckpt(model_config['ckpt'], model)
     return model, model_config['type']
 
 
@@ -85,12 +88,11 @@ def get_mimic_model(config, org_model, teacher_model_type, teacher_model_config,
     student_model = load_student_model(config, teacher_model_type, device)
     org_modules = list()
     input_batch = torch.rand(config['input_shape']).unsqueeze(0).to(device)
-    module_util.extract_decomposable_modules(org_model.backbone, input_batch, org_modules)
+    target_model = org_model.module if isinstance(org_model, nn.DataParallel) else org_model
+    module_util.extract_decomposable_modules(target_model.backbone, input_batch, org_modules)
     end_idx = teacher_model_config['end_idx']
-    mimic_modules = [student_model]
-    mimic_modules.extend(org_modules[end_idx:])
     mimic_model_config = config['mimic_model']
     mimic_type = mimic_model_config['type']
     if mimic_type.startswith('retinanet'):
-        return RetinaNetMimic(org_model, mimic_modules)
+        return RetinaNetMimic(target_model, student_model, org_modules[end_idx:], len(org_modules))
     raise ValueError('mimic_type `{}` is not expected'.format(mimic_type))

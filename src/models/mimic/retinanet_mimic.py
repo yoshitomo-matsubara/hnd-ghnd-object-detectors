@@ -19,7 +19,7 @@ def mimic_version1(make_bottleneck=False):
             nn.Conv2d(64, 128, kernel_size=2, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 256, kernel_size=2, stride=1, padding=1, bias=False),
+            nn.Conv2d(128, 256, kernel_size=2, stride=1, bias=False),
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, 512, kernel_size=2, stride=1, bias=False),
@@ -34,7 +34,7 @@ def mimic_version1(make_bottleneck=False):
         nn.Conv2d(128, 256, kernel_size=2, stride=1, padding=1, bias=False),
         nn.BatchNorm2d(256),
         nn.ReLU(inplace=True),
-        nn.Conv2d(256, 512, kernel_size=2, stride=1, padding=1, bias=False),
+        nn.Conv2d(256, 512, kernel_size=2, stride=1, bias=False),
         nn.AvgPool2d(kernel_size=2, stride=2)
     )
 
@@ -82,7 +82,6 @@ def mimic_version3(teacher_model_type, make_bottleneck=False):
 
 
 class RetinaNetHeadMimic(BaseHeadMimic):
-    # designed for input image size [3, 224, 224]
     def __init__(self, teacher_model_type, version):
         super().__init__()
         self.extractor = nn.Sequential(
@@ -108,12 +107,35 @@ class RetinaNetHeadMimic(BaseHeadMimic):
         return self.module_seq(zs)
 
 
+class RetinaNetBackboneMimic(nn.Module):
+    def __init__(self, head_model, tail_modules, org_length):
+        super().__init__()
+        self.head_model = head_model
+        diff_length = org_length - len(tail_modules)
+        if org_length == 20:
+            # RetinaNet-50
+            layer2_end_idx = 11 - diff_length
+            layer3_end_idx = 17 - diff_length
+            self.layer2 = nn.Sequential(*tail_modules[:layer2_end_idx])
+            self.layer3 = nn.Sequential(*tail_modules[layer2_end_idx:layer3_end_idx])
+            self.layer4 = nn.Sequential(*tail_modules[layer3_end_idx:])
+        else:
+            raise ValueError('org_length `{}` is not expected'.format(org_length))
+
+    def forward(self, *input):
+        z = self.head_model(*input)
+        z2 = self.layer2(z)
+        z3 = self.layer3(z2)
+        z4 = self.layer4(z3)
+        return z2, z3, z4
+
+
 class RetinaNetMimic(nn.Module):
-    def __init__(self, org_model, mimic_modules):
+    def __init__(self, org_model, head_model, tail_modules, org_length):
         super().__init__()
         self.org_model = copy.deepcopy(org_model.module if isinstance(org_model, nn.DataParallel)
                                        else copy.deepcopy(org_model))
-        self.org_model.backbone = nn.Sequential(*mimic_modules)
+        self.org_model.backbone = RetinaNetBackboneMimic(head_model, tail_modules, org_length)
 
     def forward(self, *input):
-        self.org_model(*input)
+        return self.org_model(*input)

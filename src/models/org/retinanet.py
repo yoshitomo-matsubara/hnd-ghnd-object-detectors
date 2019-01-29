@@ -9,7 +9,6 @@ from models.lib.nms.pth_nms import pth_nms
 from structure import losses
 from structure.anchors import Anchors
 from structure.transformers import BBoxTransform, ClipBoxes
-# from org.utils import BasicBlock, Bottleneck
 
 MODEL_URL_DICT = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -135,7 +134,7 @@ class ClassificationModel(nn.Module):
         self.conv4 = nn.Conv2d(feature_size, feature_size, kernel_size=3, padding=1)
         self.act4 = nn.ReLU()
 
-        self.output = nn.Conv2d(feature_size, num_anchors*num_classes, kernel_size=3, padding=1)
+        self.output = nn.Conv2d(feature_size, num_anchors * num_classes, kernel_size=3, padding=1)
         self.output_act = nn.Sigmoid()
 
     def forward(self, x):
@@ -212,11 +211,13 @@ class RetinaNet(nn.Module):
         self.backbone = backbone
 
         if block == BasicBlock:
-            fpn_sizes = [self.layer2[layers[1]-1].conv2.out_channels, self.layer3[layers[2]-1].conv2.out_channels,
-                         self.layer4[layers[3]-1].conv2.out_channels]
+            fpn_sizes = [self.backbone.layer2[layers[1]-1].conv2.out_channels,
+                         self.backbone.layer3[layers[2]-1].conv2.out_channels,
+                         self.backbone.layer4[layers[3]-1].conv2.out_channels]
         elif block == Bottleneck:
-            fpn_sizes = [self.layer2[layers[1]-1].conv3.out_channels, self.layer3[layers[2]-1].conv3.out_channels,
-                         self.layer4[layers[3]-1].conv3.out_channels]
+            fpn_sizes = [self.backbone.layer2[layers[1]-1].conv3.out_channels,
+                         self.backbone.layer3[layers[2]-1].conv3.out_channels,
+                         self.backbone.layer4[layers[3]-1].conv3.out_channels]
 
         self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2])
 
@@ -278,9 +279,9 @@ class RetinaNet(nn.Module):
             img_batch = inputs
             annotations = None
 
-        batch_shape = img_batch.shape
-        anchors = self.anchors(img_batch)
         x2, x3, x4 = self.backbone(img_batch)
+        anchors = self.anchors(img_batch)
+        batch_shape = img_batch.shape
         return self.detect(x2, x3, x4, anchors, annotations, batch_shape)
 
 
