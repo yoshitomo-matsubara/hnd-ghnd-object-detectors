@@ -138,4 +138,4 @@ class RetinaNetMimic(nn.Module):
         self.org_model.backbone = RetinaNetBackboneMimic(head_model, tail_modules, org_length)
 
     def forward(self, *input):
-        self.org_model(*input)
+        return self.org_model(*input)
