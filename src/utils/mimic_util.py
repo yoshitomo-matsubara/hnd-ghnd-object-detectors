@@ -72,8 +72,7 @@ def load_student_model(student_config, teacher_model_type, device):
 def get_org_model(teacher_model_config, device):
     teacher_config = yaml_util.load_yaml_file(teacher_model_config['config'])
     model = model_util.get_model(teacher_config, device)
-    model_config = teacher_config['model']
-    return model, model_config['type']
+    return model, teacher_config['model']['type']
 
 
 def get_tail_network(config, org_model, tail_modules):
