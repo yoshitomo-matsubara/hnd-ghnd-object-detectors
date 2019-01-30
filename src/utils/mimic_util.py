@@ -50,7 +50,7 @@ def get_teacher_model(teacher_model_config, input_shape, device):
     target_model = model.module if isinstance(model, nn.DataParallel) else model
     teacher_model = extract_teacher_model(target_model.backbone, input_shape, device, teacher_model_config)
     module_util.freeze_module_params(teacher_model)
-    return teacher_model, model_config['type']
+    return teacher_model.to(device), model_config['type']
 
 
 def get_student_model(teacher_model_type, student_model_config):
@@ -93,5 +93,11 @@ def get_mimic_model(config, org_model, teacher_model_type, teacher_model_config,
     mimic_model_config = config['mimic_model']
     mimic_type = mimic_model_config['type']
     if mimic_type.startswith('retinanet'):
-        return RetinaNetMimic(target_model, student_model, org_modules[end_idx:], len(org_modules))
-    raise ValueError('mimic_type `{}` is not expected'.format(mimic_type))
+        mimic_model = RetinaNetMimic(target_model, student_model, org_modules[end_idx:], len(org_modules))
+    else:
+        raise ValueError('mimic_type `{}` is not expected'.format(mimic_type))
+
+    mimic_model = mimic_model.to(device)
+    if device == 'cuda':
+        mimic_model = nn.DataParallel(mimic_model)
+    return mimic_model
