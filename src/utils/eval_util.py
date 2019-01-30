@@ -21,7 +21,6 @@ def calc_iou(a, b):
 
 
 def evaluate_coco(dataset, model, output_file_path, threshold=0.05, log_size=100):
-    file_util.make_parent_dirs(output_file_path)
     model.eval()
     with torch.no_grad():
         # start collecting results
@@ -80,6 +79,7 @@ def evaluate_coco(dataset, model, output_file_path, threshold=0.05, log_size=100
             return
 
         # write output
+        file_util.make_parent_dirs(output_file_path)
         json.dump(results, open(output_file_path, 'w'), indent=4)
 
         # load results in COCO evaluation tool
