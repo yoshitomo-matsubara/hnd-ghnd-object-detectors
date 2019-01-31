@@ -12,7 +12,7 @@ from utils import mimic_util, retinanet_util
 def get_argparser():
     argparser = argparse.ArgumentParser(description='Mimic Tester')
     argparser.add_argument('--config', required=True, help='yaml file path')
-    argparser.add_argument('-init', action='store_true', help='overwrite checkpoint')
+    argparser.add_argument('-skip_org', action='store_true', help='skip original model evaluation')
     return argparser
 
 
@@ -30,12 +30,14 @@ def save_ckpt(student_model, epoch, best_avg_loss, ckpt_file_path, teacher_model
     torch.save(state, ckpt_file_path)
 
 
-def evaluate(org_model, mimic_model, teacher_model_type, config):
+def evaluate(org_model, mimic_model, teacher_model_type, config, skip_org):
     if teacher_model_type.startswith('retinanet'):
         _, val_dataset = retinanet_util.get_datasets(config['dataset'])
         result_config = config['test']['result']
-        logging.info('Evaluating original model')
-        retinanet_util.evaluate(val_dataset, org_model, result_config['org'])
+        if not skip_org:
+            logging.info('Evaluating original model')
+            retinanet_util.evaluate(val_dataset, org_model, result_config['org'])
+            
         logging.info('Evaluating mimic model')
         retinanet_util.evaluate(val_dataset, mimic_model, result_config['mimic'])
     else:
@@ -54,7 +56,7 @@ def main(args):
     teacher_model_config = config['teacher_model']
     org_model, teacher_model_type = mimic_util.get_org_model(teacher_model_config, device)
     mimic_model = mimic_util.get_mimic_model(config, org_model, teacher_model_type, teacher_model_config, device)
-    evaluate(org_model, mimic_model, teacher_model_type, config)
+    evaluate(org_model, mimic_model, teacher_model_type, config, args.skip_org)
     file_util.save_pickle(mimic_model, config['mimic_model']['ckpt'])
 
 
