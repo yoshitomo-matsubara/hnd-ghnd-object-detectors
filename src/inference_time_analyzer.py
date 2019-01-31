@@ -6,8 +6,9 @@ import torch
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 
-from myutils.common import misc_util, yaml_util
+from models.mimic import retinanet_mimic
 from models.org import retinanet
+from myutils.common import misc_util, yaml_util
 from utils import mimic_util, model_util, module_spec_util, retinanet_util
 
 
@@ -42,7 +43,7 @@ def extract_timestamps(module, output_tuple_list, check_if_target_func=None):
 
 def calculate_inference_time(model, model_type):
     model = model.module if isinstance(model, nn.DataParallel) else model
-    if model_type.startswith('retinanet'):
+    if isinstance(model, retinanet_mimic.RetinaNetMimic):
         model = model.org_model
 
     start_timestamps = np.array(model.timestamps_dict['start'])
