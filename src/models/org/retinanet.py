@@ -1,4 +1,5 @@
 import math
+import time
 
 import torch
 import torch.nn as nn
@@ -76,7 +77,7 @@ class PyramidFeatures(nn.Module):
 
 class RegressionModel(nn.Module):
     def __init__(self, num_features_in, num_anchors=9, feature_size=256):
-        super(RegressionModel, self).__init__()
+        super().__init__()
 
         self.conv1 = nn.Conv2d(num_features_in, feature_size, kernel_size=3, padding=1)
         self.act1 = nn.ReLU()
@@ -116,7 +117,7 @@ class RegressionModel(nn.Module):
 
 class ClassificationModel(nn.Module):
     def __init__(self, num_features_in, num_anchors=9, num_classes=80, prior=0.01, feature_size=256):
-        super(ClassificationModel, self).__init__()
+        super().__init__()
 
         self.num_classes = num_classes
         self.num_anchors = num_anchors
@@ -166,7 +167,7 @@ class ClassificationModel(nn.Module):
 
 class ResNet(nn.Module):
     def __init__(self, block, layers):
-        super(ResNet, self).__init__()
+        super().__init__()
         self.inplanes = 64
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
@@ -227,6 +228,7 @@ class RetinaNet(nn.Module):
         self.regress_boxes = BBoxTransform()
         self.clip_boxes = ClipBoxes()
         self.focal_loss = losses.FocalLoss()
+        self.timestamps_dict = {'start': [], 'end': []}
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -270,6 +272,7 @@ class RetinaNet(nn.Module):
         scores = scores[:, scores_over_thresh, :]
         anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
         nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
+        self.timestamps_dict['end'].append(time.perf_counter())
         return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
 
     def forward(self, inputs):
@@ -279,6 +282,7 @@ class RetinaNet(nn.Module):
             img_batch = inputs
             annotations = None
 
+        self.timestamps_dict['start'].append(time.perf_counter())
         x2, x3, x4 = self.backbone(img_batch)
         anchors = self.anchors(img_batch)
         batch_shape = img_batch.shape
