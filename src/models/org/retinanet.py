@@ -265,6 +265,7 @@ class RetinaNet(nn.Module):
 
         if scores_over_thresh.sum() == 0:
             # no boxes to NMS, just return
+            self.timestamps_dict['end'].append(time.perf_counter())
             return [torch.zeros(1).cuda(), torch.zeros(1).cuda(), torch.zeros(1, 4).cuda()]
 
         classification = classification[:, scores_over_thresh, :]
