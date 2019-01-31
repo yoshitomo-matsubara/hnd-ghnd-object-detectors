@@ -36,7 +36,7 @@ def extract_timestamps(module, output_tuple_list):
         extract_timestamps(child_module, output_tuple_list)
 
 
-def calculate_inference_time(model):
+def calculate_inference_time(model, model_type):
     model = model.module if isinstance(model, nn.DataParallel) else model
     start_timestamps = np.array(model.timestamps_dict['start'])
     end_timestamps = np.array(model.timestamps_dict['end'])
@@ -47,7 +47,15 @@ def calculate_inference_time(model):
     tuple_list.append(('Output', end_timestamps))
     tuple_list = sorted(tuple_list, key=lambda x: x[1][0])
     for i in range(len(tuple_list) - 1, 0, -1):
-        tuple_list[i][0] = tuple_list[i - 1][0]
+        if model_type.startswith('retinanet'):
+            module_name = tuple_list[i][0]
+            if module_name == 'RegressionModel' or module_name == 'ClassificationModel':
+                tmp_timestamp_list = list()
+                for j, timestamp in enumerate(tuple_list[i][1]):
+                    if j > 0 and (j + 1) % 5 == 0:
+                        tmp_timestamp_list.append(timestamp)
+                tuple_list[i][1] = np.array(tmp_timestamp_list)
+        tuple_list[i][1] -= tuple_list[i - 1][1]
     return tuple_list
 
 
@@ -93,7 +101,7 @@ def main(args):
 
     module_spec_util.register_forward_hook(model, module_spec_util.time_record_hook)
     evaluate(model, model_type, config)
-    results = calculate_inference_time(model)
+    results = calculate_inference_time(model, model_type)
     plot_inference_time(results)
 
 
