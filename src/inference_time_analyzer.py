@@ -7,6 +7,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn as nn
 
 from myutils.common import misc_util, yaml_util
+from models.org import retinanet
 from utils import mimic_util, model_util, module_spec_util, retinanet_util
 
 
@@ -14,6 +15,10 @@ def get_argparser():
     argparser = argparse.ArgumentParser(description='Inference Time Analyzer')
     argparser.add_argument('--config', required=True, help='yaml file path')
     return argparser
+
+
+def check_if_retinanet_target(module):
+    return isinstance(module, retinanet.RegressionModel) or isinstance(module, retinanet.ClassificationModel)
 
 
 def evaluate(model, model_type, config):
@@ -26,18 +31,21 @@ def evaluate(model, model_type, config):
         raise ValueError('model_type `{}` is not expected'.format(model_type))
 
 
-def extract_timestamps(module, output_tuple_list):
+def extract_timestamps(module, output_tuple_list, check_if_target_func=None):
     child_modules = list(module.children())
-    if not child_modules:
+    if not child_modules or (check_if_target_func is not None and check_if_target_func(module)):
         output_tuple_list.append((type(module).__name__, np.array(module.timestamp_list)))
         return
 
     for child_module in child_modules:
-        extract_timestamps(child_module, output_tuple_list)
+        extract_timestamps(child_module, output_tuple_list, check_if_target_func)
 
 
 def calculate_inference_time(model, model_type):
     model = model.module if isinstance(model, nn.DataParallel) else model
+    if model_type.startswith('retinanet'):
+        model = model.org_model
+
     start_timestamps = np.array(model.timestamps_dict['start'])
     end_timestamps = np.array(model.timestamps_dict['end'])
     inference_times = end_timestamps - start_timestamps
@@ -99,7 +107,8 @@ def main(args):
         model = model_util.get_model(config, device)
         model_type = config['model']['type']
 
-    module_spec_util.register_forward_hook(model, module_spec_util.time_record_hook)
+    check_func = check_if_retinanet_target if model_type.startswith('retinanet') else None
+    module_spec_util.register_forward_hook(model, module_spec_util.time_record_hook, check_func)
     evaluate(model, model_type, config)
     results = calculate_inference_time(model, model_type)
     plot_inference_time(results)
