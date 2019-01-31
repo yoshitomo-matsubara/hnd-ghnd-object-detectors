@@ -41,7 +41,7 @@ def extract_timestamps(module, output_tuple_list, check_if_target_func=None):
         extract_timestamps(child_module, output_tuple_list, check_if_target_func)
 
 
-def calculate_inference_time(model, model_type):
+def calculate_inference_time(model, model_type, check_func):
     model = model.module if isinstance(model, nn.DataParallel) else model
     if isinstance(model, retinanet_mimic.RetinaNetMimic):
         model = model.org_model
@@ -51,7 +51,7 @@ def calculate_inference_time(model, model_type):
     inference_times = end_timestamps - start_timestamps
     print('Inference Time: {} \xb1 {} [ms]'.format(np.mean(inference_times), np.std(inference_times)))
     tuple_list = [('Input', start_timestamps)]
-    extract_timestamps(model, tuple_list)
+    extract_timestamps(model, tuple_list, check_func)
     tuple_list.append(('Output', end_timestamps))
     tuple_list = sorted(tuple_list, key=lambda x: x[1][0])
     for i in range(len(tuple_list) - 1, 0, -1):
@@ -110,7 +110,7 @@ def main(args):
     check_func = check_if_retinanet_target if model_type.startswith('retinanet') else None
     module_spec_util.register_forward_hook(model, module_spec_util.time_record_hook, check_func)
     evaluate(model, model_type, config)
-    results = calculate_inference_time(model, model_type)
+    results = calculate_inference_time(model, model_type, check_func)
     plot_inference_time(results)
 
 
