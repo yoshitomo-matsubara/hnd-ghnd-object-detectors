@@ -42,9 +42,9 @@ def calculate_inference_time(model):
     end_timestamps = np.array(model.timestamps_dict['end'])
     inference_times = end_timestamps - start_timestamps
     print('Inference Time: {} \xb1 {} [ms]'.format(np.mean(inference_times), np.std(inference_times)))
-    tuple_list = [('Start', start_timestamps)]
+    tuple_list = [('Input', start_timestamps)]
     extract_timestamps(model, tuple_list)
-    tuple_list.append(('End', end_timestamps))
+    tuple_list.append(('Output', end_timestamps))
     tuple_list = sorted(tuple_list, key=lambda x: x[1][0])
     for i in range(len(tuple_list) - 1, 0, -1):
         tuple_list[i][0] = tuple_list[i - 1][0]
