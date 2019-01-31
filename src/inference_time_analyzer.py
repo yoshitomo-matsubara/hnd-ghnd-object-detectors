@@ -24,9 +24,8 @@ def check_if_retinanet_target(module):
 def evaluate(model, model_type, config):
     if model_type.startswith('retinanet'):
         _, val_dataset = retinanet_util.get_datasets(config['dataset'])
-        result_config = config['test']['result']
-        print('Evaluating original model')
-        retinanet_util.evaluate(val_dataset, model, result_config['org'])
+        print('Evaluating model')
+        retinanet_util.evaluate(val_dataset, model)
     else:
         raise ValueError('model_type `{}` is not expected'.format(model_type))
 
