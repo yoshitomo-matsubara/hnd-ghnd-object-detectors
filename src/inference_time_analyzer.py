@@ -53,6 +53,14 @@ def calculate_inference_time(model, model_type, check_func):
     tuple_list = [('Input', start_timestamps)]
     extract_timestamps(model, tuple_list, check_func)
     tuple_list.append(('Output', end_timestamps))
+    index = 0
+    for _ in range(len(tuple_list)):
+        if len(tuple_list[index][1]) == 0:
+            print('No timestamp for {}'.format(tuple_list[index][0]))
+            tuple_list.pop(index)
+            continue
+        index += 1
+
     tuple_list = sorted(tuple_list, key=lambda x: x[1][0])
     for i in range(len(tuple_list) - 1, 0, -1):
         if model_type.startswith('retinanet'):
