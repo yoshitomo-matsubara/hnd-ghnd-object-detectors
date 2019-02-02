@@ -54,11 +54,18 @@ def calculate_inference_time(model, model_type, check_func):
     extract_timestamps(model, outputs_list, check_func)
     outputs_list.append(['Output', end_timestamps])
     index = 0
-    for _ in range(len(outputs_list)):
-        if len(outputs_list[index][1]) == 0:
-            print('No timestamp for {}'.format(outputs_list[index][0]))
+    for module_name, timestamps in range(len(outputs_list)):
+        if len(timestamps) == 0:
+            print('No timestamp for {}'.format(module_name))
             outputs_list.pop(index)
             continue
+            
+        if module_name == 'RegressionModel' or module_name == 'ClassificationModel':
+            tmp_timestamp_list = list()
+            for j, timestamp in enumerate(timestamps):
+                if j > 0 and (j + 1) % 5 == 0:
+                    tmp_timestamp_list.append(timestamp)
+            outputs_list[index][1] = np.array(tmp_timestamp_list)
         index += 1
 
     outputs_list = sorted(outputs_list, key=lambda x: x[1][0])
