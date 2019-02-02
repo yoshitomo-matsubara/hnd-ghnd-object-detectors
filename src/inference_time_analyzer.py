@@ -80,7 +80,7 @@ def plot_inference_time(results):
     mean_exec_time_list = list()
     std_exec_time_list = list()
     print('Module name\tExecution time[sec]')
-    for i, module_name, exec_times in enumerate(results[1:]):
+    for i, (module_name, exec_times) in enumerate(results[1:]):
         module_name_list.append(module_name + ': {}'.format(i + 1))
         mean_exec_time_list.append(exec_times.mean())
         std_exec_time_list.append(exec_times.std())
