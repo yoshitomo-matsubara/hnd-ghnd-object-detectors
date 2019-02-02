@@ -49,7 +49,7 @@ def calculate_inference_time(model, model_type, check_func):
     start_timestamps = np.array(model.timestamps_dict['start'])
     end_timestamps = np.array(model.timestamps_dict['end'])
     inference_times = end_timestamps - start_timestamps
-    print('Inference Time: {} \xb1 {} [ms]'.format(np.mean(inference_times), np.std(inference_times)))
+    print('Inference Time: {} \xb1 {} [sec]'.format(np.mean(inference_times), np.std(inference_times)))
     outputs_list = [['Input', start_timestamps]]
     extract_timestamps(model, outputs_list, check_func)
     outputs_list.append(['Output', end_timestamps])
@@ -79,7 +79,7 @@ def plot_inference_time(results):
     module_name_list = list()
     mean_exec_time_list = list()
     std_exec_time_list = list()
-    print('Module name\tExecution time[ms]')
+    print('Module name\tExecution time[sec]')
     for i, module_name, exec_times in enumerate(results[1:]):
         module_name_list.append(module_name + ': {}'.format(i + 1))
         mean_exec_time_list.append(exec_times.mean())
@@ -90,7 +90,7 @@ def plot_inference_time(results):
         xs = np.array(list(range(len(module_name_list))))
         plt.plot(xs, mean_exec_time_list)
         plt.xlabel('Modules')
-        plt.ylabel('Execution time [ms]')
+        plt.ylabel('Execution time [sec]')
         plt.xticks(xs, module_name_list, rotation=90, fontsize=12)
         plt.yticks(fontsize=12)
         plt.legend(fontsize=13)
