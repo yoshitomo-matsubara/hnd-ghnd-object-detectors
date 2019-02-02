@@ -60,7 +60,8 @@ def calculate_inference_time(model, model_type, check_func):
             outputs_list.pop(index)
             continue
 
-        if module_name == 'RegressionModel' or module_name == 'ClassificationModel':
+        if model_type.startswith('retinanet')\
+                and (module_name == 'RegressionModel' or module_name == 'ClassificationModel'):
             tmp_timestamp_list = list()
             for j, timestamp in enumerate(timestamps):
                 if j > 0 and (j + 1) % 5 == 0:
@@ -70,14 +71,6 @@ def calculate_inference_time(model, model_type, check_func):
 
     outputs_list = sorted(outputs_list, key=lambda x: x[1][0])
     for i in range(len(outputs_list) - 1, 0, -1):
-        if model_type.startswith('retinanet'):
-            module_name = outputs_list[i][0]
-            if module_name == 'RegressionModel' or module_name == 'ClassificationModel':
-                tmp_timestamp_list = list()
-                for j, timestamp in enumerate(outputs_list[i][1]):
-                    if j > 0 and (j + 1) % 5 == 0:
-                        tmp_timestamp_list.append(timestamp)
-                outputs_list[i][1] = np.array(tmp_timestamp_list)
         outputs_list[i][1] -= outputs_list[i - 1][1]
     return outputs_list
 
