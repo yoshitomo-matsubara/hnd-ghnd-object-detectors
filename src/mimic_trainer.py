@@ -33,7 +33,7 @@ def train(student_model, teacher_model, train_loader, optimizer, criterion, epoc
         inputs = inputs['img'].to(device).float()
         student_outputs = student_model(inputs)
         teacher_outputs = teacher_model(inputs)
-        if isinstance(student_outputs, list) and isinstance(teacher_outputs, list):
+        if isinstance(student_outputs, (tuple, list)) and isinstance(teacher_outputs, (tuple, list)):
             loss = 0
             for student_output, teacher_output in zip(student_outputs, teacher_outputs):
                 loss += criterion(student_output, teacher_output)
