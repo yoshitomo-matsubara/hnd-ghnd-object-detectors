@@ -58,7 +58,7 @@ def get_teacher_model(teacher_model_config, input_shape, device):
 
 def get_student_model(teacher_model_type, student_model_config):
     student_model_type = student_model_config['type']
-    if teacher_model_type.startswith('retinanet') and re.search(r'^retinanet.*_backbone_mimic', student_model_type):
+    if teacher_model_type.startswith('retinanet') and re.search(r'^retinanet.*_whole_backbone_mimic', student_model_type):
         return RetinaNetWholeBackboneMimic(teacher_model_type, student_model_config['version'])
     elif teacher_model_type.startswith('retinanet') and re.search(r'^retinanet.*_mimic', student_model_type):
         return RetinaNetHeadMimic(teacher_model_type, student_model_config['version'])
