@@ -33,7 +33,13 @@ def train(student_model, teacher_model, train_loader, optimizer, criterion, epoc
         inputs = inputs['img'].to(device).float()
         student_outputs = student_model(inputs)
         teacher_outputs = teacher_model(inputs)
-        loss = criterion(student_outputs, teacher_outputs)
+        if isinstance(student_outputs, list) and isinstance(teacher_outputs, list):
+            loss = 0
+            for student_output, teacher_output in zip(student_outputs, teacher_outputs):
+                loss += criterion(student_output, teacher_output)
+        else:
+            loss = criterion(student_outputs, teacher_outputs)
+
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
@@ -55,7 +61,13 @@ def validate(student_model, teacher_model, val_loader, criterion, device):
             inputs = inputs['img'].permute(2, 0, 1).to(device).float().unsqueeze(dim=0)
             student_outputs = student_model(inputs)
             teacher_outputs = teacher_model(inputs)
-            loss = criterion(student_outputs, teacher_outputs)
+            if isinstance(student_outputs, list) and isinstance(teacher_outputs, list):
+                loss = 0
+                for student_output, teacher_output in zip(student_outputs, teacher_outputs):
+                    loss += criterion(student_output, teacher_output)
+            else:
+                loss = criterion(student_outputs, teacher_outputs)
+
             val_loss += loss.item()
             total += inputs.size(0)
 
