@@ -128,12 +128,19 @@ class RetinaNetBackboneMimic(nn.Module):
 class RetinaNetWholeBackboneMimic(BaseBackboneMimic):
     def __init__(self, teacher_model_type, version):
         super().__init__()
+        self.extractor = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
         self.layer2 = mimic_version1(version.endswith('b'))
         self.layer3 = mimic_version2(teacher_model_type)
         self.layer4 = mimic_version3(teacher_model_type)
 
     def forward(self, *input):
-        z2 = self.layer2(*input)
+        z = self.extractor(*input)
+        z2 = self.layer2(z)
         z3 = self.layer3(z2)
         z4 = self.layer4(z3)
         return z2, z3, z4
