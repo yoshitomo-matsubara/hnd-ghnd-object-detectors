@@ -103,6 +103,9 @@ def main(args):
     input_shape = config['input_shape']
     teacher_model_config = config['teacher_model']
     teacher_model, teacher_model_type = mimic_util.get_teacher_model(teacher_model_config, input_shape, device)
+    if device == 'cuda':
+        teacher_model = nn.DataParallel(teacher_model)
+
     student_model_config = config['student_model']
     student_model = mimic_util.get_student_model(teacher_model_type, student_model_config)
     student_model = student_model.to(device)
