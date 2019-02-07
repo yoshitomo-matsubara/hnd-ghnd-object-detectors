@@ -2,7 +2,7 @@ import copy
 
 import torch.nn as nn
 
-from .base import BaseHeadMimic
+from .base import BaseBackboneMimic, BaseHeadMimic
 
 
 def mimic_version1(make_bottleneck=False):
@@ -39,11 +39,9 @@ def mimic_version1(make_bottleneck=False):
     )
 
 
-def mimic_version2(teacher_model_type, make_bottleneck=False):
-    prior_head_mimic = mimic_version1(make_bottleneck)
+def mimic_version2(teacher_model_type):
     if teacher_model_type == 'retinanet50':
         return nn.Sequential(
-            prior_head_mimic,
             nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 1024, kernel_size=2, stride=2, padding=1, bias=False),
@@ -51,7 +49,6 @@ def mimic_version2(teacher_model_type, make_bottleneck=False):
         )
     elif teacher_model_type == 'retinanet101':
         return nn.Sequential(
-            prior_head_mimic,
             nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
             nn.Conv2d(512, 1024, kernel_size=2, stride=2, padding=1, bias=False),
@@ -60,11 +57,9 @@ def mimic_version2(teacher_model_type, make_bottleneck=False):
     raise ValueError('teacher_model_type `{}` is not expected'.format(teacher_model_type))
 
 
-def mimic_version3(teacher_model_type, make_bottleneck=False):
-    prior_head_mimic = mimic_version2(make_bottleneck)
+def mimic_version3(teacher_model_type):
     if teacher_model_type == 'retinanet50':
         return nn.Sequential(
-            prior_head_mimic,
             nn.BatchNorm2d(1024),
             nn.ReLU(inplace=True),
             nn.Conv2d(1024, 2048, kernel_size=2, stride=2, padding=1, bias=False),
@@ -72,7 +67,6 @@ def mimic_version3(teacher_model_type, make_bottleneck=False):
         )
     elif teacher_model_type == 'retinanet101':
         return nn.Sequential(
-            prior_head_mimic,
             nn.BatchNorm2d(1024),
             nn.ReLU(inplace=True),
             nn.Conv2d(1024, 2048, kernel_size=2, stride=2, padding=1, bias=False),
@@ -90,15 +84,16 @@ class RetinaNetHeadMimic(BaseHeadMimic):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         )
-        if version in ['1', '1b']:
-            self.module_seq = mimic_version1(version == '1b')
-        elif version in ['2', '2b']:
-            self.module_seq = mimic_version2(teacher_model_type, version == '2b')
-        elif version in ['3', '3b']:
-            self.module_seq = mimic_version3(teacher_model_type, version == '3b')
+
+        module_seq = mimic_version1(version.endswith('b'))
+        if version in ['2', '2b', '3', '3b']:
+            module_seq = nn.Sequential(module_seq, mimic_version2(teacher_model_type))
+        if version in ['3', '3b']:
+            module_seq = nn.Sequential(module_seq, mimic_version3(teacher_model_type))
         else:
             raise ValueError('version `{}` is not expected'.format(version))
 
+        self.module_seq = module_seq
         self.teacher_model_type = teacher_model_type
         self.initialize_weights()
 
@@ -124,6 +119,27 @@ class RetinaNetBackboneMimic(nn.Module):
 
     def forward(self, *input):
         z = self.head_model(*input)
+        z2 = self.layer2(z)
+        z3 = self.layer3(z2)
+        z4 = self.layer4(z3)
+        return z2, z3, z4
+
+
+class RetinaNetWholeBackboneMimic(BaseBackboneMimic):
+    def __init__(self, teacher_model_type, version):
+        super().__init__()
+        self.extractor = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
+        self.layer2 = mimic_version1(version.endswith('b'))
+        self.layer3 = mimic_version2(teacher_model_type)
+        self.layer4 = mimic_version3(teacher_model_type)
+
+    def forward(self, *input):
+        z = self.extractor(*input)
         z2 = self.layer2(z)
         z3 = self.layer3(z2)
         z4 = self.layer4(z3)

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import time
 import torch.nn as nn
 
 from myutils.pytorch import module_util
@@ -316,3 +317,19 @@ def plot_bottleneck_data_size_vs_complexity(teacher_data_sizes, teacher_complexi
     plt.legend(fontsize=13)
     plt.tight_layout()
     plt.show()
+
+
+def time_record_hook(self, input_batch, output_batch):
+    self.timestamp_list.append(time.perf_counter())
+
+
+def register_forward_hook(module, hook_func, check_if_target_func=None):
+    child_modules = list(module.children())
+    if not child_modules or (check_if_target_func is not None and check_if_target_func(module)):
+        module.register_forward_hook(hook_func)
+        if hook_func == time_record_hook:
+            module.timestamp_list = list()
+        return
+
+    for child_module in child_modules:
+        register_forward_hook(child_module, hook_func, check_if_target_func)

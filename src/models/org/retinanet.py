@@ -1,9 +1,9 @@
 import math
+import time
 
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
-from torchvision.models.resnet import BasicBlock, Bottleneck
 
 from models.lib.nms.pth_nms import pth_nms
 from structure import losses
@@ -17,6 +17,131 @@ MODEL_URL_DICT = {
     'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
 }
+
+
+def conv3x3(in_planes, out_planes, stride=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+
+
+def conv1x1(in_planes, out_planes, stride=1):
+    """1x1 convolution"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(BasicBlock, self).__init__()
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.downsample = downsample
+        self.relu2 = nn.ReLU(inplace=True)
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu1(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu2(out)
+
+        return out
+
+
+class Bottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(Bottleneck, self).__init__()
+        self.conv1 = conv1x1(inplanes, planes)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes, stride)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.relu2 = nn.ReLU(inplace=True)
+        self.conv3 = conv1x1(planes, planes * self.expansion)
+        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
+        self.relu3 = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        identity = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu1(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu2(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            identity = self.downsample(x)
+
+        out += identity
+        out = self.relu3(out)
+
+        return out
+
+
+class ResNet(nn.Module):
+    def __init__(self, block, layers):
+        super().__init__()
+        self.inplanes = 64
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes * block.expansion),
+            )
+
+        layers = list()
+        layers.append(block(self.inplanes, planes, stride, downsample))
+        self.inplanes = planes * block.expansion
+        for _ in range(1, blocks):
+            layers.append(block(self.inplanes, planes))
+        return nn.Sequential(*layers)
+
+    def forward(self, input):
+        x = self.conv1(input)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x1 = self.layer1(x)
+        x2 = self.layer2(x1)
+        x3 = self.layer3(x2)
+        x4 = self.layer4(x3)
+        return x2, x3, x4
 
 
 def nms(dets, thresh):
@@ -76,7 +201,7 @@ class PyramidFeatures(nn.Module):
 
 class RegressionModel(nn.Module):
     def __init__(self, num_features_in, num_anchors=9, feature_size=256):
-        super(RegressionModel, self).__init__()
+        super().__init__()
 
         self.conv1 = nn.Conv2d(num_features_in, feature_size, kernel_size=3, padding=1)
         self.act1 = nn.ReLU()
@@ -116,7 +241,7 @@ class RegressionModel(nn.Module):
 
 class ClassificationModel(nn.Module):
     def __init__(self, num_features_in, num_anchors=9, num_classes=80, prior=0.01, feature_size=256):
-        super(ClassificationModel, self).__init__()
+        super().__init__()
 
         self.num_classes = num_classes
         self.num_anchors = num_anchors
@@ -164,47 +289,6 @@ class ClassificationModel(nn.Module):
         return out2.contiguous().view(x.shape[0], -1, self.num_classes)
 
 
-class ResNet(nn.Module):
-    def __init__(self, block, layers):
-        super(ResNet, self).__init__()
-        self.inplanes = 64
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-
-    def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
-
-        layers = list()
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-        return nn.Sequential(*layers)
-
-    def forward(self, input):
-        x = self.conv1(input)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-
-        x1 = self.layer1(x)
-        x2 = self.layer2(x1)
-        x3 = self.layer3(x2)
-        x4 = self.layer4(x3)
-        return x2, x3, x4
-
-
 class RetinaNet(nn.Module):
     def __init__(self, backbone, num_classes, block, layers):
         super().__init__()
@@ -227,6 +311,7 @@ class RetinaNet(nn.Module):
         self.regress_boxes = BBoxTransform()
         self.clip_boxes = ClipBoxes()
         self.focal_loss = losses.FocalLoss()
+        self.timestamps_dict = {'start': [], 'end': []}
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -263,6 +348,7 @@ class RetinaNet(nn.Module):
 
         if scores_over_thresh.sum() == 0:
             # no boxes to NMS, just return
+            self.timestamps_dict['end'].append(time.perf_counter())
             return [torch.zeros(1).cuda(), torch.zeros(1).cuda(), torch.zeros(1, 4).cuda()]
 
         classification = classification[:, scores_over_thresh, :]
@@ -270,6 +356,7 @@ class RetinaNet(nn.Module):
         scores = scores[:, scores_over_thresh, :]
         anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
         nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
+        self.timestamps_dict['end'].append(time.perf_counter())
         return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
 
     def forward(self, inputs):
@@ -279,6 +366,7 @@ class RetinaNet(nn.Module):
             img_batch = inputs
             annotations = None
 
+        self.timestamps_dict['start'].append(time.perf_counter())
         x2, x3, x4 = self.backbone(img_batch)
         anchors = self.anchors(img_batch)
         batch_shape = img_batch.shape
