@@ -147,11 +147,12 @@ class RetinaNetWholeBackboneMimic(BaseBackboneMimic):
 
 
 class RetinaNetMimic(nn.Module):
-    def __init__(self, org_model, head_model, tail_modules, org_length):
+    def __init__(self, org_model, head_model, tail_modules=None, org_length=None):
         super().__init__()
         self.org_model = copy.deepcopy(org_model.module if isinstance(org_model, nn.DataParallel)
                                        else copy.deepcopy(org_model))
-        self.org_model.backbone = RetinaNetBackboneMimic(head_model, tail_modules, org_length)
+        self.org_model.backbone = RetinaNetBackboneMimic(head_model, tail_modules, org_length)\
+            if tail_modules is None and org_length is None else head_model
 
     def forward(self, *input):
         return self.org_model(*input)

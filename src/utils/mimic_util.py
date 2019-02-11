@@ -91,13 +91,13 @@ def get_tail_network(config, org_model, tail_modules):
 
 
 def get_mimic_model(config, org_model, teacher_model_type, teacher_model_config, device):
+    target_model = org_model.module if isinstance(org_model, nn.DataParallel) else org_model
     student_model = load_student_model(config, teacher_model_type, device)
     if isinstance(student_model, BaseBackboneMimic):
-        mimic_model = student_model
+        mimic_model = RetinaNetMimic(target_model, student_model)
     elif isinstance(student_model, BaseHeadMimic):
         org_modules = list()
         input_batch = torch.rand(config['input_shape']).unsqueeze(0).to(device)
-        target_model = org_model.module if isinstance(org_model, nn.DataParallel) else org_model
         module_util.extract_decomposable_modules(target_model.backbone, input_batch, org_modules)
         end_idx = teacher_model_config['end_idx']
         mimic_model_config = config['mimic_model']
