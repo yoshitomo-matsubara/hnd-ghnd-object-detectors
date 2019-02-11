@@ -334,7 +334,7 @@ class RetinaNet(nn.Module):
                 layer.eval()
 
     def detect(self, x2, x3, x4, anchors, annotations, batch_shape):
-        device = 'cuda' if x2.is_cuda() and torch.cuda.is_available() else 'cpu'
+        device = 'cuda' if x2.is_cuda and torch.cuda.is_available() else 'cpu'
         features = self.fpn([x2, x3, x4])
         regression = torch.cat([self.regressor(feature) for feature in features], dim=1).to(device)
         classification = torch.cat([self.classifier(feature) for feature in features], dim=1).to(device)
