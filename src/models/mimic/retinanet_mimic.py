@@ -90,7 +90,7 @@ class RetinaNetHeadMimic(BaseHeadMimic):
             module_seq = nn.Sequential(module_seq, mimic_version2(teacher_model_type))
         if version in ['3', '3b']:
             module_seq = nn.Sequential(module_seq, mimic_version3(teacher_model_type))
-        else:
+        if version not in ['1', '1b', '2', '2b', '3', '3b']:
             raise ValueError('version `{}` is not expected'.format(version))
 
         self.module_seq = module_seq
