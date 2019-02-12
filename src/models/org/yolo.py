@@ -502,7 +502,7 @@ class FirstRouteBlock(nn.Module):
 
         self.seq_of_conv_seqs1 = nn.Sequential(*tmp_module_list)
 
-        self.seq4yolo_layer2 = nn.Sequential(
+        self.seq4yolo_layer1 = nn.Sequential(
             nn.Conv2d(512, 1024, 3, 1, 1), nn.Conv2d(1024, 255, kernel_size=1, stride=1, bias=False)
         )
         anchor_idxs = [int(x) for x in [6, 7, 8]]
@@ -520,8 +520,8 @@ class FirstRouteBlock(nn.Module):
         z2 = self.shortcut23(z1)
         z3 = self.seq_of_conv_seqs1(z2)
         z4 = self.upsample_seq1(z3)
-        z5 = self.seq4yolo_layer2(z3)
-        z6 = self.yolo_layer2(z5, targets, batch_report, var)
+        z5 = self.seq4yolo_layer1(z3)
+        z6 = self.yolo_layer1(z5, targets, batch_report, var)
         return [torch.cat([z1, z4], 1), z6]
 
 
