@@ -584,10 +584,6 @@ class YoloV3(nn.Module):
             create_conv_seq(64, 128, 3, 2, 1), create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1)
         )
         self.shortcut3 = ShortcutBlock(shortcut2, create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1))
-        if not self.test_only:
-            self.conv4train1 = nn.Conv2d(512, 1024, 3, 1, 1)
-            self.yolo_conv2d1 = nn.Conv2d(1024, 255, kernel_size=1, stride=1, bias=False)
-
         self.route2 = SecondRouteBlock()
         tmp_module_list = list()
         for i in range(6):
