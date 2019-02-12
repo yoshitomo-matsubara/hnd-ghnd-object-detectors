@@ -576,9 +576,9 @@ class YoloV3(nn.Module):
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nT', 'TP', 'FP', 'FPe', 'FN', 'TC']
+        self.first_conv_seq = create_conv_seq(3, 32, 3, 1, 1)
         self.shortcut1 = ShortcutBlock(
-            create_conv_seq(3, 32, 3, 1, 1), create_conv_seq(32, 64, 3, 2, 1),
-            create_conv_seq(64, 32, 1, 1, 0), create_conv_seq(32, 64, 3, 1, 1)
+            create_conv_seq(32, 64, 3, 2, 1), create_conv_seq(64, 32, 1, 1, 0), create_conv_seq(32, 64, 3, 1, 1)
         )
         shortcut2 = ShortcutBlock(
             create_conv_seq(64, 128, 3, 2, 1), create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1)
