@@ -97,6 +97,14 @@ def create_modules(module_defs):
     return hyperparams, module_list
 
 
+def create_conv_seq(num_in_channels, num_out_channels, kernel_size, stride, padding, bias=False):
+    return nn.Sequential(
+        nn.Conv2d(num_in_channels, num_out_channels, kernel_size=kernel_size, stride=stride, padding=padding, bias=bias),
+        nn.BatchNorm2d(num_out_channels, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True),
+        nn.LeakyReLU(negative_slope=0.1)
+    )
+
+
 class EmptyLayer(nn.Module):
     """Placeholder for 'route' and 'shortcut' layers"""
 
@@ -116,22 +124,8 @@ class Upsample(nn.Module):
         return F.interpolate(x, scale_factor=self.scale_factor, mode=self.mode)
 
 
-class RouteBlock(nn.Module):
-    def __init__(self, modules):
-        super().__init__()
-        self.modules = modules
-
-    def forward(self, x):
-        z = x
-        output_list = list()
-        for module in self.modules:
-            z = module(z)
-            output_list.append(z)
-        return torch.cat(output_list, 1)
-
-
 class ShortcutBlock(nn.Module):
-    def __init__(self, modules):
+    def __init__(self, *modules):
         super().__init__()
         self.first_module = modules[0]
         self.seq = nn.Sequential(*modules[1:])
@@ -139,6 +133,22 @@ class ShortcutBlock(nn.Module):
     def forward(self, x):
         z = self.first_module(x)
         return z + self.seq(z)
+
+
+class RouteBlock(nn.Module):
+    def __init__(self, modules, target_indices):
+        super().__init__()
+        self.modules = modules
+        self.target_idx_set = set(target_indices)
+
+    def forward(self, x):
+        z = x
+        output_list = list()
+        for i, module in enumerate(self.modules):
+            z = module(z)
+            if i in self.target_idx_set:
+                output_list.append(z)
+        return torch.cat(output_list, 1)
 
 
 class YOLOLayer(nn.Module):
@@ -465,3 +475,188 @@ def save_weights(self, path, cutoff=-1):
             # Load conv weights
             conv_layer.weight.data.cpu().numpy().tofile(fp)
     fp.close()
+
+
+def create_deep_shortcut_block(first_seq, first_params, second_params, depth):
+    seq = first_seq
+    for _ in range(depth):
+        seq = ShortcutBlock(seq, create_conv_seq(*first_params), create_conv_seq(*second_params))
+    return seq
+
+
+class FirstRouteBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+        shortcut12 = ShortcutBlock(
+            create_conv_seq(256, 512, 3, 2, 1), create_conv_seq(512, 256, 1, 1, 0), create_conv_seq(256, 512, 3, 1, 1)
+        )
+        self.shortcut19 = create_deep_shortcut_block(shortcut12, (512, 256, 1, 1, 0), (256, 512, 3, 1, 1), depth=7)
+        shortcut20 = ShortcutBlock(
+            create_conv_seq(512, 1024, 3, 2, 1), create_conv_seq(1024, 512, 1, 1, 0), create_conv_seq(512, 1024, 3, 1, 1)
+        )
+        self.shortcut23 = create_deep_shortcut_block(shortcut20, (1024, 512, 1, 1, 0), (512, 1024, 3, 1, 1), depth=3)
+        tmp_module_list = list()
+        for i in range(5):
+            tmp_params = (1024, 512, 1, 1, 0) if i % 2 == 0 else (512, 1024, 3, 1, 1)
+            tmp_module_list.append(create_conv_seq(*tmp_params))
+
+        self.seq_of_conv_seqs1 = nn.Sequential(*tmp_module_list)
+
+        self.seq4yolo_layer2 = nn.Sequential(
+            nn.Conv2d(512, 1024, 3, 1, 1), nn.Conv2d(1024, 255, kernel_size=1, stride=1, bias=False)
+        )
+        anchor_idxs = [int(x) for x in [6, 7, 8]]
+        anchors = [float(x) for x in [10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326]]
+        anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
+        anchors = [anchors[i] for i in anchor_idxs]
+        self.yolo_layer1 = YOLOLayer(anchors, 80, 416, anchor_idxs, cfg='yolov3.cfg')
+        self.upsample_seq1 = nn.Sequential(
+            create_conv_seq(512, 256, 1, 1, 0),
+            Upsample(scale_factor=2, mode='nearest')
+        )
+
+    def forward(self, x, targets, batch_report, var):
+        z1 = self.shortcut19(x)
+        z2 = self.shortcut23(z1)
+        z3 = self.seq_of_conv_seqs1(z2)
+        z4 = self.upsample_seq1(z3)
+        z5 = self.seq4yolo_layer2(z3)
+        z6 = self.yolo_layer2(z5, targets, batch_report, var)
+        return [torch.cat([z1, z4], 1), z6]
+
+
+class SecondRouteBlock(nn.Module):
+    def __init__(self):
+        super().__init__()
+        shortcut4 = ShortcutBlock(
+            create_conv_seq(128, 256, 3, 2, 1), create_conv_seq(256, 128, 1, 1, 0), create_conv_seq(128, 256, 3, 1, 1)
+        )
+        self.shortcut11 = create_deep_shortcut_block(shortcut4, (256, 128, 1, 1, 0), (128, 256, 3, 1, 1), depth=7)
+        self.route1 = FirstRouteBlock()
+        tmp_module_list = list()
+        for i in range(5):
+            tmp_params = (768, 256, 1, 1, 0) if i == 0 else (512, 256, 1, 1, 0) if i % 2 == 0 else (256, 512, 3, 1, 1)
+            tmp_module_list.append(create_conv_seq(*tmp_params))
+
+        self.seq_of_conv_seqs2 = nn.Sequential(*tmp_module_list)
+        self.seq4yolo_layer2 = nn.Sequential(
+            nn.Conv2d(256, 512, 3, 1, 1),
+            nn.Conv2d(512, 255, kernel_size=1, stride=1, bias=False)
+        )
+        anchor_idxs = [int(x) for x in [3, 4, 5]]
+        anchors = [float(x) for x in [10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326]]
+        anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
+        anchors = [anchors[i] for i in anchor_idxs]
+        self.yolo_layer2 = YOLOLayer(anchors, 80, 416, anchor_idxs, cfg='yolov3.cfg')
+        self.upsample_seq2 = nn.Sequential(
+            create_conv_seq(256, 128, 1, 1, 0),
+            Upsample(scale_factor=2, mode='nearest')
+        )
+
+    def forward(self, x, targets, batch_report, var):
+        z1 = self.shortcut11(x)
+        z2 = self.route1(z1)
+        z3 = self.seq_of_conv_seqs2(z2)
+        z4 = self.upsample_seq2(z3)
+        z5 = self.seq4yolo_layer2(z3)
+        z6 = self.yolo_layer2(z5, targets, batch_report, var)
+        return [torch.cat([z1, z4], 1), z6]
+
+
+class YoloV3(nn.Module):
+    """YOLOv3 object detection model"""
+
+    def __init__(self, cfg_path, img_size=416, test_only=False):
+        super().__init__()
+
+        self.module_defs = parse_model_config(cfg_path)
+        self.module_defs[0]['cfg'] = cfg_path
+        self.module_defs[0]['height'] = img_size
+        self.test_only = test_only
+        self.hyperparams, self.module_list = create_modules(self.module_defs)
+        self.img_size = img_size
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nT', 'TP', 'FP', 'FPe', 'FN', 'TC']
+        self.shortcut1 = ShortcutBlock(
+            create_conv_seq(3, 32, 3, 1, 1), create_conv_seq(32, 64, 3, 2, 1),
+            create_conv_seq(64, 32, 1, 1, 0), create_conv_seq(32, 64, 3, 1, 1)
+        )
+        shortcut2 = ShortcutBlock(
+            create_conv_seq(64, 128, 3, 2, 1), create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1)
+        )
+        self.shortcut3 = ShortcutBlock(shortcut2, create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1))
+        if not self.test_only:
+            self.conv4train1 = nn.Conv2d(512, 1024, 3, 1, 1)
+            self.yolo_conv2d1 = nn.Conv2d(1024, 255, kernel_size=1, stride=1, bias=False)
+
+        self.route2 = SecondRouteBlock()
+        tmp_module_list = list()
+        for i in range(6):
+            tmp_params = (384, 128, 1, 1, 0) if i == 0 else (256, 128, 1, 1, 0) if i % 2 == 0 else (128, 256, 3, 1, 1)
+            tmp_module_list.append(create_conv_seq(*tmp_params))
+
+        self.seq_of_conv_seqs3 = nn.Sequential(*tmp_module_list)
+        self.last_conv = nn.Conv2d(256, 255, kernel_size=1, stride=1)
+        anchor_idxs = [int(x) for x in [0, 1, 2]]
+        anchors = [float(x) for x in [10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326]]
+        anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
+        anchors = [anchors[i] for i in anchor_idxs]
+        self.yolo_layer3 = YOLOLayer(anchors, 80, 416, anchor_idxs, cfg='yolov3.cfg')
+
+    def forward(self, x, targets=None, batch_report=False, var=0):
+        self.losses = defaultdict(float)
+        is_training = targets is not None
+        layer_outputs = []
+        output = []
+
+        for i, (module_def, module) in enumerate(zip(self.module_defs, self.module_list)):
+            if module_def['type'] in ['convolutional', 'upsample', 'maxpool']:
+                x = module(x)
+            elif module_def['type'] == 'route':
+                layer_i = [int(x) for x in module_def['layers'].split(',')]
+                x = torch.cat([layer_outputs[i] for i in layer_i], 1)
+            elif module_def['type'] == 'shortcut':
+                layer_i = int(module_def['from'])
+                x = layer_outputs[-1] + layer_outputs[layer_i]
+            elif module_def['type'] == 'yolo':
+                # Train phase: get loss
+                if is_training:
+                    x, *losses = module[0](x, targets, batch_report, var)
+                    for name, loss in zip(self.loss_names, losses):
+                        self.losses[name] += loss
+                # Test phase: Get detections
+                else:
+                    x = module(x)
+                output.append(x)
+            layer_outputs.append(x)
+
+        if is_training:
+            if batch_report:
+                self.losses['TC'] /= 3  # target category
+                metrics = torch.zeros(3, len(self.losses['FPe']))  # TP, FP, FN
+
+                ui = np.unique(self.losses['TC'])[1:]
+                for i in ui:
+                    j = self.losses['TC'] == float(i)
+                    metrics[0, i] = (self.losses['TP'][j] > 0).sum().float()  # TP
+                    metrics[1, i] = (self.losses['FP'][j] > 0).sum().float()  # FP
+                    metrics[2, i] = (self.losses['FN'][j] == 3).sum().float()  # FN
+                metrics[1] += self.losses['FPe']
+
+                self.losses['TP'] = metrics[0].sum()
+                self.losses['FP'] = metrics[1].sum()
+                self.losses['FN'] = metrics[2].sum()
+                self.losses['metrics'] = metrics
+            else:
+                self.losses['TP'] = 0
+                self.losses['FP'] = 0
+                self.losses['FN'] = 0
+
+            self.losses['nT'] /= 3
+            self.losses['TC'] = 0
+
+        if ONNX_EXPORT:
+            # Produce a single-layer *.onnx model (upsample ops not working in PyTorch 1.0 export yet)
+            output = output[0]  # first layer reshaped to 85 x 507
+            return output[5:85].t(), output[:4].t()  # ONNX scores, boxes
+
+        return sum(output) if is_training else torch.cat(output, 1)
