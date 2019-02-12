@@ -555,12 +555,12 @@ class SecondRouteBlock(nn.Module):
 
     def forward(self, x, targets, batch_report, var):
         z1 = self.shortcut11(x)
-        z2 = self.route1(z1)
+        z2, yolo_output1 = self.route1(z1)
         z3 = self.seq_of_conv_seqs2(z2)
         z4 = self.upsample_seq2(z3)
         z5 = self.seq4yolo_layer2(z3)
-        z6 = self.yolo_layer2(z5, targets, batch_report, var)
-        return [torch.cat([z1, z4], 1), z6]
+        yolo_output2 = self.yolo_layer2(z5, targets, batch_report, var)
+        return [torch.cat([z1, z4], 1), yolo_output1, yolo_output2]
 
 
 class YoloV3(nn.Module):
@@ -601,30 +601,14 @@ class YoloV3(nn.Module):
     def forward(self, x, targets=None, batch_report=False, var=0):
         self.losses = defaultdict(float)
         is_training = targets is not None
-        layer_outputs = []
-        output = []
-
-        for i, (module_def, module) in enumerate(zip(self.module_defs, self.module_list)):
-            if module_def['type'] in ['convolutional', 'upsample', 'maxpool']:
-                x = module(x)
-            elif module_def['type'] == 'route':
-                layer_i = [int(x) for x in module_def['layers'].split(',')]
-                x = torch.cat([layer_outputs[i] for i in layer_i], 1)
-            elif module_def['type'] == 'shortcut':
-                layer_i = int(module_def['from'])
-                x = layer_outputs[-1] + layer_outputs[layer_i]
-            elif module_def['type'] == 'yolo':
-                # Train phase: get loss
-                if is_training:
-                    x, *losses = module[0](x, targets, batch_report, var)
-                    for name, loss in zip(self.loss_names, losses):
-                        self.losses[name] += loss
-                # Test phase: Get detections
-                else:
-                    x = module(x)
-                output.append(x)
-            layer_outputs.append(x)
-
+        z = self.first_conv_seq(x)
+        z = self.shortcut1(z)
+        z = self.shortcut3(z)
+        z, yolo_output1, yolo_output2 = self.route2(z, targets, batch_report, var)
+        z = self.seq_of_conv_seqs3(z)
+        z = self.last_conv(z)
+        yolo_output3 = self.yolo_layer3(z)
+        outputs = [yolo_output1, yolo_output2, yolo_output3]
         if is_training:
             if batch_report:
                 self.losses['TC'] /= 3  # target category
@@ -652,7 +636,7 @@ class YoloV3(nn.Module):
 
         if ONNX_EXPORT:
             # Produce a single-layer *.onnx model (upsample ops not working in PyTorch 1.0 export yet)
-            output = output[0]  # first layer reshaped to 85 x 507
+            output = outputs[0]  # first layer reshaped to 85 x 507
             return output[5:85].t(), output[:4].t()  # ONNX scores, boxes
 
-        return sum(output) if is_training else torch.cat(output, 1)
+        return sum(outputs) if is_training else torch.cat(outputs, 1)
