@@ -260,7 +260,7 @@ class CocoDataset4Yolo(Dataset):
     COCO dataset class.
     """
     def __init__(self, annotation_file_path, img_root_dir_path, img_size=416,
-                 augmentation=None, min_size=1, debug=False):
+                 augment_config=None, min_size=1, debug=False):
         """
         COCO dataset initialization. Annotation data are read into memory by COCO API.
         Args:
@@ -282,13 +282,13 @@ class CocoDataset4Yolo(Dataset):
         self.max_labels = 50
         self.img_size = img_size
         self.min_size = min_size
-        self.lrflip = augmentation['lrflip']
-        self.jitter = augmentation['jitter']
-        self.random_placing = augmentation['random_placing']
-        self.hue = augmentation['hue']
-        self.saturation = augmentation['saturation']
-        self.exposure = augmentation['exposure']
-        self.random_distort = augmentation['random_distort']
+        self.lrflip = augment_config['lrflip']
+        self.jitter = augment_config['jitter']
+        self.random_placing = augment_config['random_placing']
+        self.hue = augment_config['hue']
+        self.saturation = augment_config['saturation']
+        self.exposure = augment_config['exposure']
+        self.random_distort = augment_config['random_distort']
 
     def __len__(self):
         return len(self.ids)

@@ -20,6 +20,15 @@ dataset:
         val:
             annotation: !join [*annot_prefix, 'val2017.json']
             img_dir: !join [*img_prefix, 'val2017/']
+            augment:
+                random_resize: False
+                jitter: 0
+                random_placing: False
+                hue: 0
+                saturation: 1
+                exposure: 1
+                lrflip: False
+                random_distort: False
 
 input_shape: [3, 608, 608]
 

@@ -189,7 +189,8 @@ def get_datasets(dataset_config):
         train_dataset = CocoDataset4Yolo(train_data_config['annotation'], train_data_config['img_dir'], img_size,
                                          train_data_config['augment'])
         val_data_config = data_config['val']
-        val_dataset = CocoDataset4Yolo(val_data_config['annotation'], val_data_config['img_dir'], img_size)
+        val_dataset = CocoDataset4Yolo(val_data_config['annotation'], val_data_config['img_dir'], img_size,
+                                       val_data_config['augment'])
         return train_dataset, val_dataset
     raise ValueError('dataset_name `{}` is not expected'.format(dataset_name))
 
