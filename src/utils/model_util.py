@@ -1,5 +1,8 @@
+import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 
+from myutils.common import file_util
 from utils import retinanet_util
 
 
@@ -20,3 +23,8 @@ def get_data_loaders(dataset_config, model_type, batch_size):
         val_data_loader = DataLoader(val_dataset, num_workers=3)
         return train_data_loader, val_data_loader
     raise ValueError('model_type `{}` is not expected'.format(model_type))
+
+
+def save_ckpt(model, file_path):
+    file_util.make_parent_dirs(file_path)
+    torch.save(model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(), file_path)
