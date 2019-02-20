@@ -1,5 +1,6 @@
 import torch
-from ._ext import nms
+if torch.__version__.startswith('0.'):
+    from ._ext import nms
 
 
 def pth_nms(dets, thresh):
