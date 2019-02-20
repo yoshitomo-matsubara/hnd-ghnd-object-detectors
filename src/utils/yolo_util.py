@@ -5,11 +5,210 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
+from models.org.yolo import YoloV3
+from myutils.common import file_util
+from structure.datasets import CocoDataset4Yolo
 
 # Set printoptions
 torch.set_printoptions(linewidth=1320, precision=5, profile='long')
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+
+
+def rand_scale(s):
+    """
+    calculate random scaling factor
+    Args:
+        s (float): range of the random scale.
+    Returns:
+        random scaling factor (float) whose range is
+        from 1 / s to s .
+    """
+    scale = np.random.uniform(low=1, high=s)
+    if np.random.rand() > 0.5:
+        return scale
+    return 1 / scale
+
+
+def random_distort(img, hue, saturation, exposure):
+    """
+    perform random distortion in the HSV color space.
+    Args:
+        img (numpy.ndarray): input image whose shape is :math:`(H, W, C)`.
+            Values range from 0 to 255.
+        hue (float): random distortion parameter.
+        saturation (float): random distortion parameter.
+        exposure (float): random distortion parameter.
+    Returns:
+        img (numpy.ndarray)
+    """
+    dhue = np.random.uniform(low=-hue, high=hue)
+    dsat = rand_scale(saturation)
+    dexp = rand_scale(exposure)
+
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    img = np.asarray(img, dtype=np.float32) / 255.
+    img[:, :, 1] *= dsat
+    img[:, :, 2] *= dexp
+    tmp_img = img[:, :, 0] + dhue
+
+    if dhue > 0:
+        tmp_img[tmp_img > 1.0] -= 1.0
+    else:
+        tmp_img[tmp_img < 0.0] += 1.0
+
+    img[:, :, 0] = tmp_img
+    img = (img * 255).clip(0, 255).astype(np.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
+    img = np.asarray(img, dtype=np.float32)
+    return img
+
+
+def preprocess(img, img_size, jitter, random_placing=False):
+    """
+    Image preprocess for yolo input
+    Pad the shorter side of the image and resize to (imgsize, imgsize)
+    Args:
+        img (numpy.ndarray): input image whose shape is :math:`(H, W, C)`.
+            Values range from 0 to 255.
+        imgsize (int): target image size after pre-processing
+        jitter (float): amplitude of jitter for resizing
+        random_placing (bool): if True, place the image at random position
+    Returns:
+        img (numpy.ndarray): input image whose shape is :math:`(C, imgsize, imgsize)`.
+            Values range from 0 to 1.
+        info_img : tuple of h, w, nh, nw, dx, dy.
+            h, w (int): original shape of the image
+            nh, nw (int): shape of the resized image without padding
+            dx, dy (int): pad size
+    """
+    h, w, _ = img.shape
+    img = img[:, :, ::-1]
+    assert img is not None
+
+    if jitter > 0:
+        # add jitter
+        dw = jitter * w
+        dh = jitter * h
+        new_ar = (w + np.random.uniform(low=-dw, high=dw))\
+                 / (h + np.random.uniform(low=-dh, high=dh))
+    else:
+        new_ar = w / h
+
+    if new_ar < 1:
+        nh = img_size
+        nw = nh * new_ar
+    else:
+        nw = img_size
+        nh = nw / new_ar
+    nw, nh = int(nw), int(nh)
+
+    if random_placing:
+        dx = int(np.random.uniform(img_size - nw))
+        dy = int(np.random.uniform(img_size - nh))
+    else:
+        dx = (img_size - nw) // 2
+        dy = (img_size - nh) // 2
+
+    img = cv2.resize(img, (nw, nh))
+    sized = np.ones((img_size, img_size, 3), dtype=np.uint8) * 127
+    sized[dy:dy + nh, dx:dx + nw, :] = img
+    info_img = (h, w, nh, nw, dx, dy)
+    return sized, info_img
+
+
+def label2yolobox(labels, info_img, maxsize, lrflip):
+    """
+    Transform coco labels to yolo box labels
+    Args:
+        labels (numpy.ndarray): label data whose shape is :math:`(N, 5)`.
+            Each label consists of [class, x1, y1, x2, y2] where \
+                class (float): class index.
+                x1, y1, x2, y2 (float) : coordinates of \
+                    left-top and right-bottom points of bounding boxes.
+                    Values range from 0 to width or height of the image.
+        info_img : tuple of h, w, nh, nw, dx, dy.
+            h, w (int): original shape of the image
+            nh, nw (int): shape of the resized image without padding
+            dx, dy (int): pad size
+        maxsize (int): target image size after pre-processing
+        lrflip (bool): horizontal flip flag
+    Returns:
+        labels:label data whose size is :math:`(N, 5)`.
+            Each label consists of [class, xc, yc, w, h] where
+                class (float): class index.
+                xc, yc (float) : center of bbox whose values range from 0 to 1.
+                w, h (float) : size of bbox whose values range from 0 to 1.
+    """
+    h, w, nh, nw, dx, dy = info_img
+    x1 = labels[:, 1] / w
+    y1 = labels[:, 2] / h
+    x2 = (labels[:, 1] + labels[:, 3]) / w
+    y2 = (labels[:, 2] + labels[:, 4]) / h
+    labels[:, 1] = (((x1 + x2) / 2) * nw + dx) / maxsize
+    labels[:, 2] = (((y1 + y2) / 2) * nh + dy) / maxsize
+    labels[:, 3] *= nw / w / maxsize
+    labels[:, 4] *= nh / h / maxsize
+    if lrflip:
+        labels[:, 1] = 1 - labels[:, 1]
+    return labels
+
+
+def yolobox2label(box, info_img):
+    """
+    Transform yolo box labels to yxyx box labels.
+    Args:
+        box (list): box data with the format of [yc, xc, w, h]
+            in the coordinate system after pre-processing.
+        info_img : tuple of h, w, nh, nw, dx, dy.
+            h, w (int): original shape of the image
+            nh, nw (int): shape of the resized image without padding
+            dx, dy (int): pad size
+    Returns:
+        label (list): box data with the format of [y1, x1, y2, x2]
+            in the coordinate system of the input image.
+    """
+    h, w, nh, nw, dx, dy = info_img
+    y1, x1, y2, x2 = box
+    box_h = ((y2 - y1) / nh) * h
+    box_w = ((x2 - x1) / nw) * w
+    y1 = ((y1 - dy) / nh) * h
+    x1 = ((x1 - dx) / nw) * w
+    label = [y1, x1, y1 + box_h, x1 + box_w]
+    return label
+
+
+def get_datasets(dataset_config):
+    dataset_name = dataset_config['name']
+    data_config = dataset_config['data']
+    img_size = data_config['img_size']
+    if dataset_name.startswith('coco'):
+        train_data_config = data_config['train']
+        train_dataset = CocoDataset4Yolo(train_data_config['annotation'], train_data_config['img_dir'], img_size,
+                                         train_data_config['augment'])
+        val_data_config = data_config['val']
+        val_dataset = CocoDataset4Yolo(val_data_config['annotation'], val_data_config['img_dir'], img_size)
+        return train_dataset, val_dataset
+    raise ValueError('dataset_name `{}` is not expected'.format(dataset_name))
+
+
+def get_data_loader(dataset, batch_size=4, num_workers=0):
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+
+
+def get_model(device, ckpt_file_path, **kwargs):
+    model = YoloV3(**kwargs)
+    if file_util.check_if_exists(ckpt_file_path):
+        state_dict = torch.load(ckpt_file_path)
+        model.load_state_dict(state_dict)
+
+    model = model.to(device)
+    model.training = True
+    if device == 'cuda':
+        model = nn.DataParallel(model)
+    return model
 
 
 def init_seeds(seed=0):
@@ -298,7 +497,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh,
     return tx, ty, tw, th, tconf, tcls, tps, fps, fns, target_categories
 
 
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
+def non_max_suppression(prediction, num_classes, conf_threshold=0.7, nms_threshold=0.45):
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
     Non-Maximum Suppression to further filter detections.
@@ -306,115 +505,52 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
 
+    # From (center x, center y, width, height) to (x1, y1, x2, y2)
+    box_corner = prediction.new(prediction.shape)
+    box_corner[:, :, 0] = prediction[:, :, 0] - prediction[:, :, 2] / 2
+    box_corner[:, :, 1] = prediction[:, :, 1] - prediction[:, :, 3] / 2
+    box_corner[:, :, 2] = prediction[:, :, 0] + prediction[:, :, 2] / 2
+    box_corner[:, :, 3] = prediction[:, :, 1] + prediction[:, :, 3] / 2
+    prediction[:, :, :4] = box_corner[:, :, :4]
     output = [None for _ in range(len(prediction))]
-    for image_i, pred in enumerate(prediction):
+    for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
-        # Get score and class with highest confidence
-
-        # cross-class NMS (experimental)
-        cross_class_nms = False
-        if cross_class_nms:
-            a = pred.clone()
-            _, indices = torch.sort(-a[:, 4], 0)  # sort best to worst
-            a = a[indices]
-            radius = 30  # area to search for cross-class ious
-            for i in range(len(a)):
-                if i >= len(a) - 1:
-                    break
-
-                close = (torch.abs(a[i, 0] - a[i + 1:, 0]) < radius) & (torch.abs(a[i, 1] - a[i + 1:, 1]) < radius)
-                close = close.nonzero()
-
-                if len(close) > 0:
-                    close = close + i + 1
-                    iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
-                    bad = close[iou > nms_thres]
-
-                    if len(bad) > 0:
-                        mask = torch.ones(len(a)).type(torch.ByteTensor)
-                        mask[bad] = 0
-                        a = a[mask]
-            pred = a
-
-        # Experiment: Prior class size rejection
-        # x, y, w, h = pred[:, 0], pred[:, 1], pred[:, 2], pred[:, 3]
-        # a = w * h  # area
-        # ar = w / (h + 1e-16)  # aspect ratio
-        # n = len(w)
-        # log_w, log_h, log_a, log_ar = torch.log(w), torch.log(h), torch.log(a), torch.log(ar)
-        # shape_likelihood = np.zeros((n, 60), dtype=np.float32)
-        # x = np.concatenate((log_w.reshape(-1, 1), log_h.reshape(-1, 1)), 1)
-        # from scipy.stats import multivariate_normal
-        # for c in range(60):
-        # shape_likelihood[:, c] = multivariate_normal.pdf(x, mean=mat['class_mu'][c, :2], cov=mat['class_cov'][c, :2, :2])
-
-        class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
-
-        v = ((pred[:, 4] > conf_thres) & (class_prob > .3))  # TODO examine arbitrary 0.3 thres here
-        v = v.nonzero().squeeze()
-        if len(v.shape) == 0:
-            v = v.unsqueeze(0)
-
-        pred = pred[v]
-        class_prob = class_prob[v]
-        class_pred = class_pred[v]
-
+        conf_mask = (image_pred[:, 4] >= conf_thres).squeeze()
+        image_pred = image_pred[conf_mask]
         # If none are remaining => process next image
-        nP = pred.shape[0]
-        if not nP:
+        if not image_pred.size(0):
             continue
-
-        # From (center x, center y, width, height) to (x1, y1, x2, y2)
-        pred[:, :4] = xywh2xyxy(pred[:, :4])
-
-        # Detections ordered as (x1, y1, x2, y2, obj_conf, class_prob, class_pred)
-        detections = torch.cat((pred[:, :5], class_prob.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
+        # Get score and class with highest confidence
+        class_conf, class_pred = torch.max(image_pred[:, 5: 5 + num_classes], 1, keepdim=True)
+        # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
+        detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
         # Iterate through all predicted classes
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
-            unique_labels = unique_labels.cuda(prediction.device)
-
-        nms_style = 'OR'  # 'AND' or 'OR' (classical)
+            unique_labels = unique_labels.cuda()
         for c in unique_labels:
             # Get the detections with the particular class
-            det_class = detections[detections[:, -1] == c]
+            detections_class = detections[detections[:, -1] == c]
             # Sort the detections by maximum objectness confidence
-            _, conf_sort_index = torch.sort(det_class[:, 4], descending=True)
-            det_class = det_class[conf_sort_index]
+            _, conf_sort_index = torch.sort(detections_class[:, 4], descending=True)
+            detections_class = detections_class[conf_sort_index]
             # Perform non-maximum suppression
-            det_max = []
+            max_detections = []
+            while detections_class.size(0):
+                # Get detection with highest confidence and save as max detection
+                max_detections.append(detections_class[0].unsqueeze(0))
+                # Stop if we're at the last detection
+                if len(detections_class) == 1:
+                    break
 
-            if nms_style == 'OR':  # Classical NMS
-                while det_class.shape[0]:
-                    # Get detection with highest confidence and save as max detection
-                    det_max.append(det_class[0].unsqueeze(0))
-                    # Stop if we're at the last detection
-                    if len(det_class) == 1:
-                        break
-                    # Get the IOUs for all boxes with lower confidence
-                    ious = bbox_iou(det_max[-1], det_class[1:])
+                # Get the IOUs for all boxes with lower confidence
+                ious = bbox_iou(max_detections[-1], detections_class[1:])
+                # Remove detections with IoU >= NMS threshold
+                detections_class = detections_class[1:][ious < nms_thres]
 
-                    # Remove detections with IoU >= NMS threshold
-                    det_class = det_class[1:][ious < nms_thres]
-
-            elif nms_style == 'AND':  # 'AND'-style NMS: >=2 boxes must share commonality to pass, single boxes erased
-                while det_class.shape[0]:
-                    if len(det_class) == 1:
-                        break
-
-                    ious = bbox_iou(det_class[:1], det_class[1:])
-
-                    if ious.max() > 0.5:
-                        det_max.append(det_class[0].unsqueeze(0))
-
-                    # Remove detections with IoU >= NMS threshold
-                    det_class = det_class[1:][ious < nms_thres]
-
-            if len(det_max) > 0:
-                det_max = torch.cat(det_max).data
-                # Add max detections to outputs
-                output[image_i] = det_max if output[image_i] is None else torch.cat((output[image_i], det_max))
-
+            max_detections = torch.cat(max_detections).data
+            # Add max detections to outputs
+            output[image_i] = max_detections if output[image_i] is None else torch.cat((output[image_i], max_detections))
     return output
 
 

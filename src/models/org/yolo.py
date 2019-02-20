@@ -1,11 +1,11 @@
 from collections import defaultdict
 
-import torch
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.yolo_util import class_weights, build_targets
 
+from utils import yolo_util
 
 ONNX_EXPORT = False
 
@@ -271,7 +271,7 @@ class YOLOLayer(nn.Module):
         self.anchor_wh = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])  # scale anchors
         self.anchor_w = self.anchor_wh[:, 0].view((1, num_anchors, 1, 1))
         self.anchor_h = self.anchor_wh[:, 1].view((1, num_anchors, 1, 1))
-        self.weights = class_weights()
+        self.weights = yolo_util.class_weights()
 
         self.loss_means = torch.ones(6)
         self.yolo_layer = anchor_idxs[0] / num_anchors  # 2, 1, 0
@@ -334,8 +334,8 @@ class YOLOLayer(nn.Module):
                                        gy + height / 2), 4)  # x1y1x2y2
 
             tx, ty, tw, th, mask, tcls, num_tps, num_fps, num_fns, target_categories = \
-                build_targets(p_boxes, p_conf, p_cls, targets, self.anchor_wh, self.num_anchors,
-                              self.num_classes, num_grids, batch_report)
+                yolo_util.build_targets(p_boxes, p_conf, p_cls, targets, self.anchor_wh, self.num_anchors,
+                                        self.num_classes, num_grids, batch_report)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -656,16 +656,13 @@ class SecondRouteBlock(nn.Module):
 class YoloV3(nn.Module):
     """YOLOv3 object detection model"""
 
-    def __init__(self, cfg_path, img_size=416, test_only=False):
+    def __init__(self, img_size=416, conf_threshold=0.7, nms_threshold=0.45):
         super().__init__()
-
-        self.module_defs = parse_model_config(cfg_path)
-        self.module_defs[0]['cfg'] = cfg_path
-        self.module_defs[0]['height'] = img_size
-        self.test_only = test_only
-        self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
+        self.conf_threshold = conf_threshold
+        self.nms_threshold = nms_threshold
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nT', 'TP', 'FP', 'FPe', 'FN', 'TC']
+        self.losses = None
         self.first_conv_seq = create_conv_seq(3, 32, 3, 1, 1)
         self.shortcut1 = ShortcutBlock(
             create_conv_seq(32, 64, 3, 2, 1), create_conv_seq(64, 32, 1, 1, 0), create_conv_seq(32, 64, 3, 1, 1)
@@ -730,4 +727,4 @@ class YoloV3(nn.Module):
             return output[5:85].t(), output[:4].t()  # ONNX scores, boxes
 
         return sum(outputs) if is_training\
-            else non_max_suppression(torch.cat(outputs, 1), 80, conf_thres=0.5, nms_thres=0.45)
+            else non_max_suppression(torch.cat(outputs, 1), 80, self.conf_threshold, self.nms_threshold)

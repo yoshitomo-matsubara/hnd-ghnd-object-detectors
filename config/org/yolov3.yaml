@@ -1,0 +1,57 @@
+dataset:
+    name: &dataset_name 'coco2017'
+    root: &data_dir !join ['./resource/data/', *dataset_name, '/']
+    data:
+        annot_prefix: &annot_prefix !join [*data_dir, 'annotations/instances_']
+        img_prefix: &img_prefix !join [*data_dir, 'images/']
+        img_size: &img_size 608
+        train:
+            annotation: !join [*annot_prefix, 'train2017.json']
+            img_dir: !join [*img_prefix, 'train2017/']
+            augment:
+                random_resize: True
+                jitter: 0.3
+                random_placing: True
+                hue: 0.1
+                saturation: 1.5
+                exposure: 1.5
+                lrflip: True
+                random_distort: True
+        val:
+            annotation: !join [*annot_prefix, 'val2017.json']
+            img_dir: !join [*img_prefix, 'val2017/']
+
+input_shape: [3, 608, 608]
+
+model:
+    type: &model_type 'yolov3'
+    experiment: &experiment !join [*dataset_name, '-', *model_type]
+    ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
+    params:
+        img_size: *img_size,
+        conf_threshold: 0.7,
+        nms_threshold: 0.45
+
+train:
+    epoch: 500000
+    batch_size: 4
+    num_logs: 50
+    optimizer:
+        type: 'sgd'
+        params:
+            lr: 0.001
+            momentum: 0.9
+            dampening: 0
+    misc:
+        burn_in: 1000
+        steps: (400000, 450000)
+        decay: 0.0005
+        subdivision: 16
+        loss_type: l2
+        ignore_threshold: 0.7
+        ckpt_interval: 1000
+
+    log: !join ['./log/org/', *experiment, '.txt']
+
+test:
+    batch_size: 1
