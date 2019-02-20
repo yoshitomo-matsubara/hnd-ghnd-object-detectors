@@ -282,13 +282,13 @@ class CocoDataset4Yolo(Dataset):
         self.max_labels = 50
         self.img_size = img_size
         self.min_size = min_size
-        self.lrflip = augmentation['LRFLIP']
-        self.jitter = augmentation['JITTER']
-        self.random_placing = augmentation['RANDOM_PLACING']
-        self.hue = augmentation['HUE']
-        self.saturation = augmentation['SATURATION']
-        self.exposure = augmentation['EXPOSURE']
-        self.random_distort = augmentation['RANDOM_DISTORT']
+        self.lrflip = augmentation['lrflip']
+        self.jitter = augmentation['jitter']
+        self.random_placing = augmentation['random_placing']
+        self.hue = augmentation['hue']
+        self.saturation = augmentation['saturation']
+        self.exposure = augmentation['exposure']
+        self.random_distort = augmentation['random_distort']
 
     def __len__(self):
         return len(self.ids)
