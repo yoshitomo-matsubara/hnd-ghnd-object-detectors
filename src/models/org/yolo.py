@@ -645,7 +645,7 @@ class SecondRouteBlock(nn.Module):
 
     def forward(self, x, targets, batch_report, var):
         z1 = self.shortcut11(x)
-        z2, yolo_output1 = self.route1(z1)
+        z2, yolo_output1 = self.route1(z1, targets, batch_report, var)
         z3 = self.seq_of_conv_seqs2(z2)
         z4 = self.upsample_seq2(z3)
         z5 = self.seq4yolo_layer2(z3)
