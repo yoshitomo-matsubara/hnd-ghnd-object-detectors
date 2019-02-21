@@ -90,7 +90,7 @@ class RetinaNetHeadMimic(BaseHeadMimic):
             module_seq = nn.Sequential(module_seq, mimic_version2(teacher_model_type))
         if version in ['3', '3b']:
             module_seq = nn.Sequential(module_seq, mimic_version3(teacher_model_type))
-        else:
+        if version not in ['1', '1b', '2', '2b', '3', '3b']:
             raise ValueError('version `{}` is not expected'.format(version))
 
         self.module_seq = module_seq
@@ -147,11 +147,12 @@ class RetinaNetWholeBackboneMimic(BaseBackboneMimic):
 
 
 class RetinaNetMimic(nn.Module):
-    def __init__(self, org_model, head_model, tail_modules, org_length):
+    def __init__(self, org_model, head_model, tail_modules=None, org_length=None):
         super().__init__()
         self.org_model = copy.deepcopy(org_model.module if isinstance(org_model, nn.DataParallel)
                                        else copy.deepcopy(org_model))
-        self.org_model.backbone = RetinaNetBackboneMimic(head_model, tail_modules, org_length)
+        self.org_model.backbone = head_model if tail_modules is None and org_length is None\
+            else RetinaNetBackboneMimic(head_model, tail_modules, org_length)
 
     def forward(self, *input):
         return self.org_model(*input)

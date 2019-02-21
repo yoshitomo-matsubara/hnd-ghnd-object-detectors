@@ -334,9 +334,10 @@ class RetinaNet(nn.Module):
                 layer.eval()
 
     def detect(self, x2, x3, x4, anchors, annotations, batch_shape):
+        device = 'cuda' if x2.is_cuda and torch.cuda.is_available() else 'cpu'
         features = self.fpn([x2, x3, x4])
-        regression = torch.cat([self.regressor(feature) for feature in features], dim=1)
-        classification = torch.cat([self.classifier(feature) for feature in features], dim=1)
+        regression = torch.cat([self.regressor(feature) for feature in features], dim=1).to(device)
+        classification = torch.cat([self.classifier(feature) for feature in features], dim=1).to(device)
 
         if self.training:
             return self.focal_loss(classification, regression, anchors, annotations)
@@ -349,12 +350,12 @@ class RetinaNet(nn.Module):
         if scores_over_thresh.sum() == 0:
             # no boxes to NMS, just return
             self.timestamps_dict['end'].append(time.perf_counter())
-            return [torch.zeros(1).cuda(), torch.zeros(1).cuda(), torch.zeros(1, 4).cuda()]
+            return [torch.zeros(1).to(device), torch.zeros(1).to(device), torch.zeros(1, 4).to(device)]
 
         classification = classification[:, scores_over_thresh, :]
         transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
         scores = scores[:, scores_over_thresh, :]
-        anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
+        anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :].to(device), 0.5)
         nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
         self.timestamps_dict['end'].append(time.perf_counter())
         return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]

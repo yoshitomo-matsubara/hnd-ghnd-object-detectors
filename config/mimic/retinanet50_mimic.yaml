@@ -33,7 +33,7 @@ mimic_model:
 train:
     epoch: 30
     batch_size: 2
-    interval: 50
+    interval: 200
     optimizer:
         type: 'Adam'
         params:

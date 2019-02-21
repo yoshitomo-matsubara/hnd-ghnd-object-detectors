@@ -5,6 +5,7 @@ import torch
 from pycocotools.cocoeval import COCOeval
 
 from myutils.common import file_util
+from utils import yolo_util
 
 
 def calc_iou(a, b):
@@ -95,6 +96,62 @@ def evaluate_coco(dataset, model, output_file_path, threshold=0.05, log_size=100
         result = coco_eval.eval
         model.train()
         return result
+
+
+def evaluate_coco4yolo(dataset, model, device, output_file_path='tmp.json'):
+    """
+    COCO average precision (AP) Evaluation. Iterate inference on the test dataset
+    and the results are evaluated by COCO API.
+    Args:
+        model : model object
+    Returns:
+        ap50_95 (float) : calculated COCO AP for IoU=50:95
+        ap50 (float) : calculated COCO AP for IoU=50
+    """
+    model.eval()
+    ids = []
+    data_dict = []
+    data_iterator = iter(yolo_util.get_data_loader(dataset))
+    # all the data in val2017
+    for img, _, info_img, id_ in data_iterator:
+        info_img = [float(info) for info in info_img]
+        id_ = int(id_)
+        ids.append(id_)
+        with torch.no_grad():
+            img = img.to(device)
+            outputs = model(img)
+            if outputs[0] is None:
+                continue
+
+            outputs = outputs[0].cpu().data
+
+        for output in outputs:
+            x1 = float(output[0])
+            y1 = float(output[1])
+            x2 = float(output[2])
+            y2 = float(output[3])
+            label = dataset.class_ids[int(output[6])]
+            box = yolo_util.yolobox2label((y1, x1, y2, x2), info_img)
+            bbox = [box[1], box[0], box[3] - box[1], box[2] - box[0]]
+            score = float(output[4].data.item() * output[5].data.item())  # object score * class score
+            result_dict = {"image_id": id_, "category_id": label, "bbox": bbox,
+                           "score": score, "segmentation": []}  # COCO json format
+            data_dict.append(result_dict)
+
+    # Evaluate the Dt (detection) json comparing with the ground truth
+    if len(data_dict) > 0:
+        coco = dataset
+        file_util.make_parent_dirs(output_file_path)
+        json.dump(data_dict, open(output_file_path, 'w'))
+        coco_detection = coco.loadRes(output_file_path)
+        result = COCOeval(dataset, coco_detection, 'bbox')
+        result.params.imgIds = ids
+        result.evaluate()
+        result.accumulate()
+        result.summarize()
+        return result.stats[0], result.stats[1]
+    else:
+        return 0, 0
 
 
 def compute_overlap(a, b):

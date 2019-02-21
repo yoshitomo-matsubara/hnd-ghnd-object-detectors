@@ -6,12 +6,11 @@ import os
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-import torch.nn as nn
 import torch.optim as optim
 
-from myutils.common import file_util, log_util, yaml_util
+from myutils.common import log_util, yaml_util
 from myutils.pytorch import func_util
-from utils import retinanet_util
+from utils import model_util, retinanet_util
 
 
 def get_args():
@@ -58,11 +57,6 @@ def train(retinanet, train_data_loader, optimizer, loss_hist_list, device, epoch
     return epoch_loss_list
 
 
-def save_ckpt(model, file_path):
-    file_util.make_parent_dirs(file_path)
-    torch.save(model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(), file_path)
-
-
 def build_model(args, device, config):
     train_dataset, val_dataset = retinanet_util.get_datasets(config['dataset'])
     train_config = config['train']
@@ -92,7 +86,7 @@ def build_model(args, device, config):
 
         retinanet_util.evaluate(val_dataset, model)
         scheduler.step(np.mean(epoch_losses))
-        save_ckpt(model, ckpt_file_path)
+        model_util.save_ckpt(model, ckpt_file_path)
 
 
 def main(args):
