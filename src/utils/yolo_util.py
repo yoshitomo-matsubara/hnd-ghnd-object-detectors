@@ -205,9 +205,6 @@ def get_model(device, ckpt_file_path, **kwargs):
         model.load_state_dict(state_dict)
 
     model = model.to(device)
-    model.training = True
-    if device == 'cuda':
-        model = nn.DataParallel(model)
     return model
 
 
