@@ -665,7 +665,7 @@ class YoloV3(nn.Module):
         self.conf_threshold = conf_threshold
         self.nms_threshold = nms_threshold
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nT', 'TP', 'FP', 'FPe', 'FN', 'TC']
-        self.losses = None
+        self.loss_dict = None
         self.first_conv_seq = create_conv_seq(3, 32, 3, 1, 1)
         self.shortcut1 = ShortcutBlock(
             create_conv_seq(32, 64, 3, 2, 1), create_conv_seq(64, 32, 1, 1, 0), create_conv_seq(32, 64, 3, 1, 1)
@@ -689,7 +689,7 @@ class YoloV3(nn.Module):
         self.yolo_layer3 = YOLOLayer(anchors, 80, img_size, anchor_idxs, cfg='yolov3.cfg')
 
     def forward(self, x, targets=None, batch_report=False, var=0):
-        self.losses = defaultdict(float)
+        self.loss_dict = defaultdict(float)
         is_training = targets is not None
         z = self.first_conv_seq(x)
         z = self.shortcut1(z)
@@ -709,15 +709,14 @@ class YoloV3(nn.Module):
             if batch_report:
                 self.loss_dict['TC'] /= 3  # target category
                 metrics = torch.zeros(3, len(self.loss_dict['FPe']))  # TP, FP, FN
-
                 ui = np.unique(self.loss_dict['TC'])[1:]
                 for i in ui:
                     j = self.loss_dict['TC'] == float(i)
                     metrics[0, i] = (self.loss_dict['TP'][j] > 0).sum().float()  # TP
                     metrics[1, i] = (self.loss_dict['FP'][j] > 0).sum().float()  # FP
                     metrics[2, i] = (self.loss_dict['FN'][j] == 3).sum().float()  # FN
-                metrics[1] += self.loss_dict['FPe']
 
+                metrics[1] += self.loss_dict['FPe']
                 self.loss_dict['TP'] = metrics[0].sum()
                 self.loss_dict['FP'] = metrics[1].sum()
                 self.loss_dict['FN'] = metrics[2].sum()
