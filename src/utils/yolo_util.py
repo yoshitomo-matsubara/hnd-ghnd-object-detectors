@@ -92,8 +92,7 @@ def preprocess(img, img_size, jitter, random_placing=False):
         # add jitter
         dw = jitter * w
         dh = jitter * h
-        new_ar = (w + np.random.uniform(low=-dw, high=dw))\
-                 / (h + np.random.uniform(low=-dh, high=dh))
+        new_ar = (w + np.random.uniform(low=-dw, high=dw)) / (h + np.random.uniform(low=-dh, high=dh))
     else:
         new_ar = w / h
 
@@ -103,8 +102,8 @@ def preprocess(img, img_size, jitter, random_placing=False):
     else:
         nw = img_size
         nh = nw / new_ar
-    nw, nh = int(nw), int(nh)
 
+    nw, nh = int(nw), int(nh)
     if random_placing:
         dx = int(np.random.uniform(img_size - nw))
         dy = int(np.random.uniform(img_size - nh))
@@ -424,8 +423,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh,
         num_targets = target_sizes[b]  # number of targets
         if num_targets == 0:
             continue
-        t = target[b]
 
+        t = target[b]
         # Convert to position relative to box
         target_categories[b, :num_targets], gx, gy, gw, gh =\
             t[:, 0].long(), t[:, 1] * num_grids, t[:, 2] * num_grids, t[:, 3] * num_grids, t[:, 4] * num_grids
@@ -516,7 +515,7 @@ def non_max_suppression(prediction, num_classes, conf_threshold=0.7, nms_thresho
     output = [None for _ in range(len(prediction))]
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
-        conf_mask = (image_pred[:, 4] >= conf_thres).squeeze()
+        conf_mask = (image_pred[:, 4] >= conf_threshold).squeeze()
         image_pred = image_pred[conf_mask]
         # If none are remaining => process next image
         if not image_pred.size(0):
@@ -547,7 +546,7 @@ def non_max_suppression(prediction, num_classes, conf_threshold=0.7, nms_thresho
                 # Get the IOUs for all boxes with lower confidence
                 ious = bbox_iou(max_detections[-1], detections_class[1:])
                 # Remove detections with IoU >= NMS threshold
-                detections_class = detections_class[1:][ious < nms_thres]
+                detections_class = detections_class[1:][ious < nms_threshold]
 
             max_detections = torch.cat(max_detections).data
             # Add max detections to outputs

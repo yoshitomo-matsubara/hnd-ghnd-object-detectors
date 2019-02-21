@@ -349,5 +349,5 @@ class CocoDataset4Yolo(Dataset):
             labels = np.stack(labels)
             labels = yolo_util.label2yolobox(labels, info_img, self.img_size, lrflip)
             padded_labels[range(len(labels))[:self.max_labels]] = labels[:self.max_labels]
-        padded_labels = torch.from_numpy(padded_labels)
+        padded_labels = torch.from_numpy(padded_labels.astype(np.float32))
         return img, padded_labels, info_img, id_

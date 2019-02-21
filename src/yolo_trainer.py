@@ -74,6 +74,7 @@ def train(model, train_dataset, val_dataset, optimizer, epoch, batch_size, subdi
             except StopIteration:
                 train_data_iterator = iter(train_data_loader)
                 imgs, targets, _, _ = next(train_data_iterator)  # load a batch
+
             imgs = imgs.to(device)
             targets = targets.to(device)
             loss = model(imgs, targets)
