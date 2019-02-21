@@ -309,8 +309,8 @@ class YOLOLayer(nn.Module):
             cross_entropy_loss = nn.CrossEntropyLoss()
 
             # Get outputs
-            x = F.sigmoid(p[..., 0])  # Center x
-            y = F.sigmoid(p[..., 1])  # Center y
+            x = torch.sigmoid(p[..., 0])  # Center x
+            y = torch.sigmoid(p[..., 1])  # Center y
             p_conf = p[..., 4]  # Conf
             p_cls = p[..., 5:]  # Class
 
@@ -703,32 +703,32 @@ class YoloV3(nn.Module):
             loss, *misc_losses = output
             output_list.append(loss)
             for name, misc_loss in zip(self.loss_names, misc_losses):
-                self.losses[name] += misc_loss
+                self.loss_dict[name] += misc_loss
 
         if is_training:
             if batch_report:
-                self.losses['TC'] /= 3  # target category
-                metrics = torch.zeros(3, len(self.losses['FPe']))  # TP, FP, FN
+                self.loss_dict['TC'] /= 3  # target category
+                metrics = torch.zeros(3, len(self.loss_dict['FPe']))  # TP, FP, FN
 
-                ui = np.unique(self.losses['TC'])[1:]
+                ui = np.unique(self.loss_dict['TC'])[1:]
                 for i in ui:
-                    j = self.losses['TC'] == float(i)
-                    metrics[0, i] = (self.losses['TP'][j] > 0).sum().float()  # TP
-                    metrics[1, i] = (self.losses['FP'][j] > 0).sum().float()  # FP
-                    metrics[2, i] = (self.losses['FN'][j] == 3).sum().float()  # FN
-                metrics[1] += self.losses['FPe']
+                    j = self.loss_dict['TC'] == float(i)
+                    metrics[0, i] = (self.loss_dict['TP'][j] > 0).sum().float()  # TP
+                    metrics[1, i] = (self.loss_dict['FP'][j] > 0).sum().float()  # FP
+                    metrics[2, i] = (self.loss_dict['FN'][j] == 3).sum().float()  # FN
+                metrics[1] += self.loss_dict['FPe']
 
-                self.losses['TP'] = metrics[0].sum()
-                self.losses['FP'] = metrics[1].sum()
-                self.losses['FN'] = metrics[2].sum()
-                self.losses['metrics'] = metrics
+                self.loss_dict['TP'] = metrics[0].sum()
+                self.loss_dict['FP'] = metrics[1].sum()
+                self.loss_dict['FN'] = metrics[2].sum()
+                self.loss_dict['metrics'] = metrics
             else:
-                self.losses['TP'] = 0
-                self.losses['FP'] = 0
-                self.losses['FN'] = 0
+                self.loss_dict['TP'] = 0
+                self.loss_dict['FP'] = 0
+                self.loss_dict['FN'] = 0
 
-            self.losses['nT'] /= 3
-            self.losses['TC'] = 0
+            self.loss_dict['nT'] /= 3
+            self.loss_dict['TC'] = 0
 
         if ONNX_EXPORT:
             # Produce a single-layer *.onnx model (upsample ops not working in PyTorch 1.0 export yet)
