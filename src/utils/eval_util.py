@@ -111,7 +111,7 @@ def evaluate_coco4yolo(dataset, model, device, output_file_path='tmp.json'):
     model.eval()
     ids = []
     data_dict = []
-    data_iterator = iter(yolo_util.get_data_loader(dataset))
+    data_iterator = iter(yolo_util.get_data_loader(dataset, batch_size=1))
     # all the data in val2017
     for img, _, info_img, id_ in data_iterator:
         info_img = [float(info) for info in info_img]
