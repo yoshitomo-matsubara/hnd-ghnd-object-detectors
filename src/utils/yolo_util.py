@@ -447,7 +447,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh,
 
             # Unique anchor selection
             u = torch.cat((gi, gj, a), 0).view(3, -1)
-            _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
+            _, first_unique = np.unique(u[:, iou_order].cpu(), axis=1, return_index=True)  # first unique indices
             # _, first_unique = torch.unique(u[:, iou_order], dim=1, return_inverse=True)  # different than numpy?
 
             i = iou_order[first_unique]
