@@ -468,8 +468,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh,
             t[:, 0].long(), t[:, 1] * num_grids, t[:, 2] * num_grids, t[:, 3] * num_grids, t[:, 4] * num_grids
 
         # Coordinates
-        tx[b, a, gj, gi] = gx - gi.float()
-        ty[b, a, gj, gi] = gy - gj.float()
+        tx[b, a, gj, gi] = (gx - gi.float()).cpu()
+        ty[b, a, gj, gi] = (gy - gj.float()).cpu()
 
         # Width and height (yolo method)
         tw[b, a, gj, gi] = torch.log(gw / anchor_wh[a, 0])
