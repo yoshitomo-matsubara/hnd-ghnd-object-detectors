@@ -197,7 +197,6 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
     box_corner[:, :, 2] = prediction[:, :, 0] + prediction[:, :, 2] / 2
     box_corner[:, :, 3] = prediction[:, :, 1] + prediction[:, :, 3] / 2
     prediction[:, :, :4] = box_corner[:, :, :4]
-
     output = [None for _ in range(len(prediction))]
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
@@ -206,6 +205,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         # If none are remaining => process next image
         if not image_pred.size(0):
             continue
+
         # Get score and class with highest confidence
         class_conf, class_pred = torch.max(image_pred[:, 5: 5 + num_classes], 1, keepdim=True)
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
@@ -214,6 +214,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
             unique_labels = unique_labels.cuda()
+
         for c in unique_labels:
             # Get the detections with the particular class
             detections_class = detections[detections[:, -1] == c]
@@ -228,6 +229,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
                 # Stop if we're at the last detection
                 if len(detections_class) == 1:
                     break
+
                 # Get the IOUs for all boxes with lower confidence
                 ious = bbox_iou(max_detections[-1], detections_class[1:])
                 # Remove detections with IoU >= NMS threshold
@@ -695,8 +697,14 @@ class YoloV3(nn.Module):
         z, yolo_output1, yolo_output2 = self.route2(z, targets, batch_report, var)
         z = self.seq_of_conv_seqs3(z)
         z = self.last_conv(z)
-        yolo_output3 = self.yolo_layer3(z)
-        outputs = [yolo_output1, yolo_output2, yolo_output3]
+        yolo_output3 = self.yolo_layer3(z, targets, batch_report, var)
+        output_list = list()
+        for output in [yolo_output1, yolo_output2, yolo_output3]:
+            loss, *misc_losses = output
+            output_list.append(loss)
+            for name, misc_loss in zip(self.loss_names, misc_losses):
+                self.losses[name] += misc_loss
+
         if is_training:
             if batch_report:
                 self.losses['TC'] /= 3  # target category
@@ -724,8 +732,8 @@ class YoloV3(nn.Module):
 
         if ONNX_EXPORT:
             # Produce a single-layer *.onnx model (upsample ops not working in PyTorch 1.0 export yet)
-            output = outputs[0]  # first layer reshaped to 85 x 507
+            output = output_list[0]  # first layer reshaped to 85 x 507
             return output[5:85].t(), output[:4].t()  # ONNX scores, boxes
 
-        return sum(outputs) if is_training\
-            else non_max_suppression(torch.cat(outputs, 1), 80, self.conf_threshold, self.nms_threshold)
+        return sum(output_list) if is_training\
+            else non_max_suppression(torch.cat(output_list, 1), 80, self.conf_threshold, self.nms_threshold)
