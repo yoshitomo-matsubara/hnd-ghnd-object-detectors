@@ -292,7 +292,8 @@ class YOLOLayer(nn.Module):
 
         if p.is_cuda and not self.weights.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
-            self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
+            self.anchor_wh, self.anchor_w, self.anchor_h =\
+                self.anchor_wh.cuda(), self.anchor_w.cuda(), self.anchor_h.cuda()
             self.weights, self.loss_means = self.weights.cuda(), self.loss_means.cuda()
 
         # p.view(12, 255, 13, 13) -- > (12, 3, 13, 13, 80)  # (bs, anchors, grid, grid, classes + xywh)
