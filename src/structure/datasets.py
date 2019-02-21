@@ -319,7 +319,7 @@ class CocoDataset4Yolo(Dataset):
         annotations = self.coco.loadAnns(anno_ids)
 
         lrflip = False
-        if np.random.rand() > 0.5 and self.lrflip == True:
+        if np.random.rand() > 0.5 and self.lrflip:
             lrflip = True
 
         # load image and preprocess
