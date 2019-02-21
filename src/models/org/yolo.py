@@ -576,7 +576,7 @@ def create_deep_shortcut_block(first_seq, first_params, second_params, depth):
 
 
 class FirstRouteBlock(nn.Module):
-    def __init__(self):
+    def __init__(self, img_size):
         super().__init__()
         shortcut12 = ShortcutBlock(
             create_conv_seq(256, 512, 3, 2, 1), create_conv_seq(512, 256, 1, 1, 0), create_conv_seq(256, 512, 3, 1, 1)
@@ -600,7 +600,7 @@ class FirstRouteBlock(nn.Module):
         anchors = [float(x) for x in [10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326]]
         anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
         anchors = [anchors[i] for i in anchor_idxs]
-        self.yolo_layer1 = YOLOLayer(anchors, 80, 416, anchor_idxs, cfg='yolov3.cfg')
+        self.yolo_layer1 = YOLOLayer(anchors, 80, img_size, anchor_idxs, cfg='yolov3.cfg')
         self.upsample_seq1 = nn.Sequential(
             create_conv_seq(512, 256, 1, 1, 0),
             Upsample(scale_factor=2, mode='nearest')
@@ -617,13 +617,13 @@ class FirstRouteBlock(nn.Module):
 
 
 class SecondRouteBlock(nn.Module):
-    def __init__(self):
+    def __init__(self, img_size):
         super().__init__()
         shortcut4 = ShortcutBlock(
             create_conv_seq(128, 256, 3, 2, 1), create_conv_seq(256, 128, 1, 1, 0), create_conv_seq(128, 256, 3, 1, 1)
         )
         self.shortcut11 = create_deep_shortcut_block(shortcut4, (256, 128, 1, 1, 0), (128, 256, 3, 1, 1), depth=7)
-        self.route1 = FirstRouteBlock()
+        self.route1 = FirstRouteBlock(img_size)
         tmp_module_list = list()
         for i in range(5):
             tmp_params = (768, 256, 1, 1, 0) if i == 0 else (512, 256, 1, 1, 0) if i % 2 == 0 else (256, 512, 3, 1, 1)
@@ -638,7 +638,7 @@ class SecondRouteBlock(nn.Module):
         anchors = [float(x) for x in [10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326]]
         anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
         anchors = [anchors[i] for i in anchor_idxs]
-        self.yolo_layer2 = YOLOLayer(anchors, 80, 416, anchor_idxs, cfg='yolov3.cfg')
+        self.yolo_layer2 = YOLOLayer(anchors, 80, img_size, anchor_idxs, cfg='yolov3.cfg')
         self.upsample_seq2 = nn.Sequential(
             create_conv_seq(256, 128, 1, 1, 0),
             Upsample(scale_factor=2, mode='nearest')
@@ -672,7 +672,7 @@ class YoloV3(nn.Module):
             create_conv_seq(64, 128, 3, 2, 1), create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1)
         )
         self.shortcut3 = ShortcutBlock(shortcut2, create_conv_seq(128, 64, 1, 1, 0), create_conv_seq(64, 128, 3, 1, 1))
-        self.route2 = SecondRouteBlock()
+        self.route2 = SecondRouteBlock(img_size)
         tmp_module_list = list()
         for i in range(6):
             tmp_params = (384, 128, 1, 1, 0) if i == 0 else (256, 128, 1, 1, 0) if i % 2 == 0 else (128, 256, 3, 1, 1)
@@ -684,7 +684,7 @@ class YoloV3(nn.Module):
         anchors = [float(x) for x in [10, 13, 16, 30, 33, 23, 30, 61, 62, 45, 59, 119, 116, 90, 156, 198, 373, 326]]
         anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
         anchors = [anchors[i] for i in anchor_idxs]
-        self.yolo_layer3 = YOLOLayer(anchors, 80, 416, anchor_idxs, cfg='yolov3.cfg')
+        self.yolo_layer3 = YOLOLayer(anchors, 80, img_size, anchor_idxs, cfg='yolov3.cfg')
 
     def forward(self, x, targets=None, batch_report=False, var=0):
         self.losses = defaultdict(float)
