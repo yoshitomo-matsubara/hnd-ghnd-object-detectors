@@ -93,7 +93,7 @@ def train(model, train_dataset, val_dataset, optimizer, epoch, batch_size, subdi
         if iter_i > 0 and (iter_i % ckpt_interval == 0):
             # logging
             logging.info('[Iter {:d}/{:d}] [lr: {:1.5f}] Losses: xy {:1.5f}, wh {:1.5f}, conf {:1.5f}, '
-                         'cls {:1.5f}, total {:1.5f}'.format(iter_i + 1, epoch, current_lr, model.loss_dict['xy'],
+                         'cls {:1.5f}, total {:1.5f}'.format(iter_i, epoch, current_lr, model.loss_dict['xy'],
                                                              model.loss_dict['wh'], model.loss_dict['conf'],
                                                              model.loss_dict['cls'], model.loss_dict['l2']))
             ap50_95, ap50 = eval_util.evaluate_coco4yolo(val_dataset, model, device)
