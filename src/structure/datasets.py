@@ -313,9 +313,9 @@ class CocoDataset4Yolo(Dataset):
                 dx, dy (int): pad size
             id_ (int): same as the input index. Used for evaluation.
         """
-        id_ = self.ids[index]
+        img_id = self.ids[index]
 
-        anno_ids = self.coco.getAnnIds(imgIds=[int(id_)], iscrowd=None)
+        anno_ids = self.coco.getAnnIds(imgIds=[int(img_id)], iscrowd=None)
         annotations = self.coco.loadAnns(anno_ids)
 
         lrflip = False
@@ -323,7 +323,7 @@ class CocoDataset4Yolo(Dataset):
             lrflip = True
 
         # load image and preprocess
-        img_file = os.path.join(self.img_root_dir_path, '{:012}'.format(id_) + '.jpg')
+        img_file = os.path.join(self.img_root_dir_path, '{:012}'.format(img_id) + '.jpg')
         img = cv2.imread(img_file)
         assert img is not None
 
@@ -348,4 +348,4 @@ class CocoDataset4Yolo(Dataset):
             labels = yolo_util.label2yolobox(labels, info_img, self.img_size, lrflip)
             padded_labels[range(len(labels))[:self.max_labels]] = labels[:self.max_labels]
         padded_labels = torch.from_numpy(padded_labels.astype(np.float32))
-        return img, padded_labels, info_img, id_
+        return img, padded_labels, info_img, img_id
