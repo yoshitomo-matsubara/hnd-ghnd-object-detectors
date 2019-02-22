@@ -92,10 +92,11 @@ def train(model, train_dataset, val_dataset, optimizer, epoch, batch_size, subdi
         # save checkpoint
         if iter_i > 0 and (iter_i % ckpt_interval == 0):
             # logging
-            logging.info('[Iter {:d}/{:d}] [lr: {:1.5f}] Losses: xy {:1.5f}, wh {:1.5f}, conf {:1.5f}, '
-                         'cls {:1.5f}, total {:1.5f}'.format(iter_i, epoch, current_lr, model.loss_dict['xy'],
-                                                             model.loss_dict['wh'], model.loss_dict['conf'],
-                                                             model.loss_dict['cls'], model.loss_dict['l2']))
+            logging.info('[Iter {:d}/{:d}] [lr: {:1.5f}] '
+                         'Losses: x {:1.5f}, y {:1.5f}, w {:1.5f}, h {:1.5f}, conf {:1.5f}, cls {:1.5f}, '
+                         'total {:1.5f}'.format(iter_i, epoch, current_lr,model.loss_dict['x'], model.loss_dict['y'],
+                                                model.loss_dict['w'], model.loss_dict['h'], model.loss_dict['conf'],
+                                                model.loss_dict['cls'], model.loss_dict['loss']))
             ap50_95, ap50 = eval_util.evaluate_coco4yolo(val_dataset, model, device)
             model.train()
             if ap50 > best_val_ap50:
