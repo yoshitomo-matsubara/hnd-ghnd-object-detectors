@@ -698,14 +698,14 @@ class YoloV3(nn.Module):
         z = self.seq_of_conv_seqs3(z)
         z = self.last_conv(z)
         yolo_output3 = self.yolo_layer3(z, targets, batch_report, var)
-        output_list = list()
-        for output in [yolo_output1, yolo_output2, yolo_output3]:
-            loss, *misc_losses = output
-            output_list.append(loss)
-            for name, misc_loss in zip(self.loss_names, misc_losses):
-                self.loss_dict[name] += misc_loss
-
         if is_training:
+            output_list = list()
+            for output in [yolo_output1, yolo_output2, yolo_output3]:
+                loss, *misc_losses = output
+                output_list.append(loss)
+                for name, misc_loss in zip(self.loss_names, misc_losses):
+                    self.loss_dict[name] += misc_loss
+
             if batch_report:
                 self.loss_dict['TC'] /= 3  # target category
                 metrics = torch.zeros(3, len(self.loss_dict['FPe']))  # TP, FP, FN
@@ -728,6 +728,8 @@ class YoloV3(nn.Module):
 
             self.loss_dict['nT'] /= 3
             self.loss_dict['TC'] = 0
+        else:
+            output_list = [yolo_output1, yolo_output2, yolo_output3]
 
         if ONNX_EXPORT:
             # Produce a single-layer *.onnx model (upsample ops not working in PyTorch 1.0 export yet)
