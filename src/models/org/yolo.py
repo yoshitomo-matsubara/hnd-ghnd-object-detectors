@@ -457,7 +457,7 @@ class YoloV3(nn.Module):
                 loss, *misc_losses = output
                 output_list.append(loss)
                 for name, misc_loss in zip(self.loss_names, misc_losses):
-                    self.loss_dict[name] += misc_loss
+                    self.loss_dict[name] = misc_loss + self.loss_dict[name] if name in self.loss_dict else misc_loss
 
             if batch_report:
                 self.loss_dict['TC'] /= 3  # target category
