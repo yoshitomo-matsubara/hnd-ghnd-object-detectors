@@ -53,7 +53,7 @@ train:
             dampening: 0
     misc:
         burn_in: 1000
-        steps: (400000, 450000)
+        steps: [400000, 450000]
         decay: 0.0005
         subdivision: 16
         loss_type: l2
