@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -442,7 +440,7 @@ class YoloV3(nn.Module):
         self.yolo_layer3 = YOLOLayer(anchors, 80, img_size, anchor_idxs, cfg='yolov3.cfg')
 
     def forward(self, x, targets=None, batch_report=False, var=0):
-        self.loss_dict = defaultdict(float)
+        self.loss_dict = dict()
         is_training = targets is not None
         z = self.first_conv_seq(x)
         z = self.shortcut1(z)
