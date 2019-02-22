@@ -140,7 +140,7 @@ def evaluate_coco4yolo(dataset, model, device, output_file_path='tmp.json'):
 
     # Evaluate the Dt (detection) json comparing with the ground truth
     if len(data_dict) > 0:
-        coco = dataset
+        coco = dataset.coco
         file_util.make_parent_dirs(output_file_path)
         json.dump(data_dict, open(output_file_path, 'w'))
         coco_detection = coco.loadRes(output_file_path)
