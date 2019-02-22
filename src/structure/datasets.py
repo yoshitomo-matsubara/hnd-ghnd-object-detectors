@@ -328,10 +328,7 @@ class CocoDataset4Yolo(Dataset):
         assert img is not None
 
         img, info_img = yolo_util.preprocess(img, self.img_size, jitter=self.jitter, random_placing=self.random_placing)
-
-        if self.random_distort:
-            img = yolo_util.random_distort(img, self.hue, self.saturation, self.exposure)
-
+        img = yolo_util.random_distort(img, self.hue, self.saturation, self.exposure) if self.random_distort else np.asarray(img, dtype=np.float32)
         img = np.transpose(img / 255., (2, 0, 1))
         if lrflip:
             img = np.flip(img, axis=2).copy()
