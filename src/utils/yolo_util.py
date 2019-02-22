@@ -314,10 +314,9 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
         i = pred_cls == c
         n_gt = sum(target_cls == c)  # Number of ground truth objects
         n_p = sum(i)  # Number of predicted objects
-
-        if (n_p == 0) and (n_gt == 0):
+        if n_p == 0 and n_gt == 0:
             continue
-        elif (n_p == 0) or (n_gt == 0):
+        elif n_p == 0 or n_gt == 0:
             ap.append(0)
             r.append(0)
             p.append(0)
@@ -336,7 +335,6 @@ def ap_per_class(tp, conf, pred_cls, target_cls):
 
             # AP from recall-precision curve
             ap.append(compute_ap(recall_curve, precision_curve))
-
     return np.array(ap), unique_classes.astype('int32'), np.array(r), np.array(p)
 
 
@@ -489,7 +487,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh,
             tps[b, i] = (pconf > 0.5) & (iou_pred > 0.5) & (pcls == tc)
             fps[b, i] = (pconf > 0.5) & (tps[b, i] == 0)  # coordinates or class are wrong
             fns[b, i] = pconf <= 0.5  # confidence score is too low (set to zero)
-
     return tx, ty, tw, th, tconf, tcls, tps, fps, fns, target_categories
 
 
