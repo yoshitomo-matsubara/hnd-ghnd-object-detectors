@@ -144,7 +144,7 @@ def evaluate_coco4yolo(dataset, model, device, output_file_path='tmp.json'):
         file_util.make_parent_dirs(output_file_path)
         json.dump(data_dict, open(output_file_path, 'w'))
         coco_detection = coco.loadRes(output_file_path)
-        result = COCOeval(dataset, coco_detection, 'bbox')
+        result = COCOeval(coco, coco_detection, 'bbox')
         result.params.imgIds = ids
         result.evaluate()
         result.accumulate()
