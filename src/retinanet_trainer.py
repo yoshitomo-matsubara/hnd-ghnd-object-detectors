@@ -66,7 +66,7 @@ def build_model(args, device, config):
     ckpt_file_path = model_config['ckpt']
     model = retinanet_util.get_model(device, ckpt_file_path, **model_config['params'])
     if args.eval:
-        retinanet_util.evaluate(val_dataset, model)
+        retinanet_util.evaluate(val_dataset, model, device)
         return
 
     num_epochs = train_config['epoch'] if args.epoch is None else args.epoch
@@ -84,7 +84,7 @@ def build_model(args, device, config):
         if val_dataset is None:
             continue
 
-        retinanet_util.evaluate(val_dataset, model)
+        retinanet_util.evaluate(val_dataset, model, device)
         scheduler.step(np.mean(epoch_losses))
         model_util.save_ckpt(model, ckpt_file_path)
 

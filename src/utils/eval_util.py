@@ -21,7 +21,7 @@ def calc_iou(a, b):
     return iou
 
 
-def evaluate_coco(dataset, model, output_file_path, threshold=0.05, log_size=100):
+def evaluate_coco(dataset, model, device, output_file_path, threshold=0.05, log_size=100):
     model.eval()
     with torch.no_grad():
         # start collecting results
@@ -34,7 +34,7 @@ def evaluate_coco(dataset, model, output_file_path, threshold=0.05, log_size=100
             scale = data['scale']
 
             # run network
-            scores, labels, boxes = model(data['img'].permute(2, 0, 1).cuda().float().unsqueeze(dim=0))
+            scores, labels, boxes = model(data['img'].permute(2, 0, 1).to(device).float().unsqueeze(dim=0))
             scores = scores.cpu()
             labels = labels.cpu()
             boxes = boxes.cpu()
@@ -202,7 +202,7 @@ def _compute_ap(recall, precision):
     return ap
 
 
-def _get_detections(dataset, model, score_threshold=0.05, max_detections=100):
+def _get_detections(dataset, model, device, score_threshold=0.05, max_detections=100):
     """ Get the detections from the model using the generator.
     The result is a list of lists such that the size is:
         all_detections[num_images][num_classes] = detections[num_detections, 4 + num_classes]
@@ -222,7 +222,7 @@ def _get_detections(dataset, model, score_threshold=0.05, max_detections=100):
             data = dataset[index]
             scale = data['scale']
             # run network
-            scores, labels, boxes = model(data['img'].permute(2, 0, 1).cuda().float().unsqueeze(dim=0))
+            scores, labels, boxes = model(data['img'].permute(2, 0, 1).to(device).float().unsqueeze(dim=0))
             scores = scores.cpu().numpy()
             labels = labels.cpu().numpy()
             boxes = boxes.cpu().numpy()
@@ -279,7 +279,7 @@ def _get_annotations(generator):
     return all_annotations
 
 
-def evaluate_csv(generator, model, iou_threshold=0.5, score_threshold=0.05, max_detections=100):
+def evaluate_csv(generator, model, device, iou_threshold=0.5, score_threshold=0.05, max_detections=100):
     """ Evaluate a given dataset using a given model.
     # Arguments
         generator       : The generator that represents the dataset to evaluate.
@@ -293,7 +293,7 @@ def evaluate_csv(generator, model, iou_threshold=0.5, score_threshold=0.05, max_
     """
 
     # gather all detections and annotations
-    all_detections = _get_detections(generator, model, score_threshold=score_threshold,
+    all_detections = _get_detections(generator, model, device, score_threshold=score_threshold,
                                      max_detections=max_detections)
     all_annotations = _get_annotations(generator)
     average_precisions = {}

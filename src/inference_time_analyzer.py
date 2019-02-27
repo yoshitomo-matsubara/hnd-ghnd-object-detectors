@@ -9,7 +9,7 @@ import torch.nn as nn
 from models.mimic import retinanet_mimic
 from models.org import retinanet
 from myutils.common import misc_util, yaml_util
-from utils import mimic_util, model_util, module_spec_util, retinanet_util
+from utils import eval_util, mimic_util, model_util, module_spec_util, retinanet_util, yolo_util
 
 
 def get_argparser():
@@ -22,11 +22,14 @@ def check_if_retinanet_target(module):
     return isinstance(module, retinanet.RegressionModel) or isinstance(module, retinanet.ClassificationModel)
 
 
-def evaluate(model, model_type, config):
+def evaluate(model, model_type, device, config):
     if model_type.startswith('retinanet'):
         _, val_dataset = retinanet_util.get_datasets(config['dataset'])
         print('Evaluating model')
-        retinanet_util.evaluate(val_dataset, model)
+        retinanet_util.evaluate(val_dataset, model, device)
+    elif model_type.startswith('yolo'):
+        _, val_dataset = yolo_util.get_datasets(config['dataset'])
+        eval_util.evaluate_coco4yolo(val_dataset, model, device)
     else:
         raise ValueError('model_type `{}` is not expected'.format(model_type))
 
@@ -117,7 +120,7 @@ def main(args):
 
     check_func = check_if_retinanet_target if model_type.startswith('retinanet') else None
     module_spec_util.register_forward_hook(model, module_spec_util.time_record_hook, check_func)
-    evaluate(model, model_type, config)
+    evaluate(model, model_type, device, config)
     results = calculate_inference_time(model, model_type, check_func)
     plot_inference_time(results)
 

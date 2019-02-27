@@ -77,13 +77,13 @@ def get_train_data_loader(train_dataset, batch_size=2, drop_last=False, num_work
     return DataLoader(train_dataset, num_workers=num_workers, collate_fn=collater, batch_sampler=train_sampler)
 
 
-def evaluate(dataset, model, output_file_path='tmp.json'):
+def evaluate(dataset, model, device, output_file_path='tmp.json'):
     if isinstance(dataset, CocoDataset):
         logging.info('Using COCO dataset')
-        return eval_util.evaluate_coco(dataset, model, output_file_path)
+        return eval_util.evaluate_coco(dataset, model, device, output_file_path)
     elif isinstance(dataset, CSVDataset):
         logging.info('Using CSV dataset')
-        mean_ap = eval_util.evaluate_csv(dataset, model)
+        mean_ap = eval_util.evaluate_csv(dataset, model, device)
         logging.info('mAP: {}'.format(mean_ap))
         return mean_ap
     else:

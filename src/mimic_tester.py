@@ -30,16 +30,16 @@ def save_ckpt(student_model, epoch, best_avg_loss, ckpt_file_path, teacher_model
     torch.save(state, ckpt_file_path)
 
 
-def evaluate(org_model, mimic_model, teacher_model_type, config, skip_org):
+def evaluate(org_model, mimic_model, teacher_model_type, device, config, skip_org):
     if teacher_model_type.startswith('retinanet'):
         _, val_dataset = retinanet_util.get_datasets(config['dataset'])
         result_config = config['test']['result']
         if not skip_org:
             logging.info('Evaluating original model')
-            retinanet_util.evaluate(val_dataset, org_model, result_config['org'])
-            
+            retinanet_util.evaluate(val_dataset, org_model, device, result_config['org'])
+
         logging.info('Evaluating mimic model')
-        retinanet_util.evaluate(val_dataset, mimic_model, result_config['mimic'])
+        retinanet_util.evaluate(val_dataset, mimic_model, device, result_config['mimic'])
     else:
         raise ValueError('teacher_model_type `{}` is not expected'.format(teacher_model_type))
 
@@ -56,7 +56,7 @@ def main(args):
     teacher_model_config = config['teacher_model']
     org_model, teacher_model_type = mimic_util.get_org_model(teacher_model_config, device)
     mimic_model = mimic_util.get_mimic_model(config, org_model, teacher_model_type, teacher_model_config, device)
-    evaluate(org_model, mimic_model, teacher_model_type, config, args.skip_org)
+    evaluate(org_model, mimic_model, teacher_model_type, device, config, args.skip_org)
     file_util.save_pickle(mimic_model, config['mimic_model']['ckpt'])
 
 
