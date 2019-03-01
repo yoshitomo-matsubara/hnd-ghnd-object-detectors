@@ -16,13 +16,6 @@ def create_conv_seq(num_in_channels, num_out_channels, kernel_size, stride, padd
     )
 
 
-class EmptyLayer(nn.Module):
-    """Placeholder for 'route' and 'shortcut' layers"""
-
-    def __init__(self):
-        super(EmptyLayer, self).__init__()
-
-
 class Upsample(nn.Module):
     # Custom Upsample layer (nn.Upsample gives deprecated warning message)
 
@@ -184,7 +177,6 @@ class YOLOLayer(nn.Module):
         self.anchor_wh = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])  # scale anchors
         self.anchor_w = self.anchor_wh[:, 0].view((1, num_anchors, 1, 1))
         self.anchor_h = self.anchor_wh[:, 1].view((1, num_anchors, 1, 1))
-        self.weights = yolo_util.class_weights()
 
         self.loss_means = torch.ones(6)
         self.yolo_layer = anchor_idxs[0] / num_anchors  # 2, 1, 0

@@ -11,7 +11,7 @@ from models.org.yolo import YoloV3
 from myutils.common import file_util
 from structure.datasets import CocoDataset4Yolo
 
-# Set printoptions
+# Set print options
 torch.set_printoptions(linewidth=1320, precision=5, profile='long')
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
 
@@ -224,28 +224,6 @@ def load_classes(path):
     return list(filter(None, names))  # filter removes empty strings (such as last line)
 
 
-def model_info(model):  # Plots a line-by-line description of a PyTorch model
-    n_p = sum(x.numel() for x in model.parameters())  # number parameters
-    n_g = sum(x.numel() for x in model.parameters() if x.requires_grad)  # number gradients
-    print('\n%5s %50s %9s %12s %20s %12s %12s' % ('layer', 'name', 'gradient', 'parameters', 'shape', 'mu', 'sigma'))
-    for i, (name, p) in enumerate(model.named_parameters()):
-        name = name.replace('module_list.', '')
-        print('%5g %50s %9s %12g %20s %12.3g %12.3g' % (
-            i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
-    print('Model Summary: %g layers, %g parameters, %g gradients\n' % (i + 1, n_p, n_g))
-
-
-def class_weights():  # frequency of each class in coco train2014
-    weights = 1 / torch.FloatTensor(
-        [187437, 4955, 30920, 6033, 3838, 4332, 3160, 7051, 7677, 9167, 1316, 1372, 833, 6757, 7355, 3302, 3776, 4671,
-         6769, 5706, 3908, 903, 3686, 3596, 6200, 7920, 8779, 4505, 4272, 1862, 4698, 1962, 4403, 6659, 2402, 2689,
-         4012, 4175, 3411, 17048, 5637, 14553, 3923, 5539, 4289, 10084, 7018, 4314, 3099, 4638, 4939, 5543, 2038, 4004,
-         5053, 4578, 27292, 4113, 5931, 2905, 11174, 2873, 4036, 3415, 1517, 4122, 1980, 4464, 1190, 2302, 156, 3933,
-         1877, 17630, 4337, 4624, 1075, 3468, 135, 1380])
-    weights /= weights.sum()
-    return weights
-
-
 def plot_one_box(x, img, color=None, label=None, line_thickness=None):  # Plots one bounding box on image img
     tl = line_thickness or round(0.002 * max(img.shape[0:2])) + 1  # line thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
@@ -260,10 +238,10 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=None):  # Plots 
 
 
 def weights_init_normal(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
+    class_name = m.__class__.__name__
+    if class_name.find('Conv') != -1:
         torch.nn.init.normal_(m.weight.data, 0.0, 0.03)
-    elif classname.find('BatchNorm2d') != -1:
+    elif class_name.find('BatchNorm2d') != -1:
         torch.nn.init.normal_(m.weight.data, 1.0, 0.03)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
