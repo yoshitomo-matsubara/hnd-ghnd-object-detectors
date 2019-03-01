@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from myutils.common import file_util
-from utils import retinanet_util
+from utils import retinanet_util, yolo_util
 
 
 def get_model(config, device):
@@ -13,6 +13,8 @@ def get_model(config, device):
     model_params_config = model_config['params']
     if model_type.startswith('retinanet'):
         return retinanet_util.get_model(device, ckpt_file_path, **model_params_config)
+    elif model_type.startswith('yolo'):
+        return yolo_util.get_model(device, ckpt_file_path, **model_params_config)
     raise ValueError('teacher_model_type `{}` is not expected'.format(model_type))
 
 
