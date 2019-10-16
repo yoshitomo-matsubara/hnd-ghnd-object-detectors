@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 
 from models.org.yolo import YoloV3
 from myutils.common import file_util
-from structure.datasets import CocoDataset4Yolo
+from structure.dataset import CocoDataset4Yolo
 
 # Set print options
 torch.set_printoptions(linewidth=1320, precision=5, profile='long')
