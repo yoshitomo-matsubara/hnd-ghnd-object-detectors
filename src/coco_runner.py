@@ -68,6 +68,7 @@ def get_argparser():
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument('--config', required=True, help='yaml config file')
     argparser.add_argument('--device', default='cuda', help='device')
+    argparser.add_argument('-train', action='store_true', help='train a model')
     # distributed training parameters
     argparser.add_argument('--world-size', default=1, type=int, help='number of distributed processes')
     argparser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
@@ -117,7 +118,7 @@ def evaluate(model, data_loader, device):
     return coco_evaluator
 
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, log_freq):
+def train_model(model, optimizer, data_loader, device, epoch, log_freq):
     model.train()
     metric_logger = misc_util.MetricLogger(delimiter='  ')
     metric_logger.add_meter('lr', misc_util.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -170,7 +171,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         if distributed:
             train_sampler.set_epoch(epoch)
 
-        train_one_epoch(model, optimizer, train_data_loader, device, epoch, log_freq)
+        train_model(model, optimizer, train_data_loader, device, epoch, log_freq)
         lr_scheduler.step()
 
         # evaluate after every epoch
