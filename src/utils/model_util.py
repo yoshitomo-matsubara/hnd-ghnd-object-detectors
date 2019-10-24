@@ -35,7 +35,7 @@ def get_model(model_config, num_classes):
     if model_type in detection.__dict__:
         model = detection.__dict__[model_type](num_classes=num_classes, pretrained=pretrained)
     elif model_type.startswith('yolo'):
-        model = yolo_util.get_model(device, ckpt_file_path, **model_params_config)
+        model = yolo_util.get_model('cpu', ckpt_file_path, **model_params_config)
     else:
         raise ValueError('model_type `{}` is not expected'.format(model_type))
     load_ckpt(ckpt_file_path, model=model)

@@ -17,7 +17,6 @@ class CocoEvaluator(object):
         assert isinstance(iou_types, (list, tuple))
         coco_gt = copy.deepcopy(coco_gt)
         self.coco_gt = coco_gt
-
         self.iou_types = iou_types
         self.coco_eval = {}
         for iou_type in iou_types:
@@ -294,10 +293,10 @@ def loadRes(self, resFile):
 
 
 def evaluate(self):
-    '''
+    """
     Run per image evaluation on given images and store results (a list of dict) in self.evalImgs
     :return: None
-    '''
+    """
     # tic = time.time()
     # print('Running per image evaluation...')
     p = self.params

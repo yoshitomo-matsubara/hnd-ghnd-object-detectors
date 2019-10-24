@@ -65,113 +65,13 @@ def init_distributed_mode(args):
 
 
 def get_argparser():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--data-path', default='/datasets01/COCO/022719/', help='dataset')
-    parser.add_argument('--dataset', default='coco', help='dataset')
-    parser.add_argument('--model', default='maskrcnn_resnet50_fpn', help='model')
-    parser.add_argument('--device', default='cuda', help='device')
-    parser.add_argument('-b', '--batch-size', default=2, type=int,
-                        help='images per gpu, the total batch size is $NGPU x batch_size')
-    parser.add_argument('--epochs', default=13, type=int, metavar='N',
-                        help='number of total epochs to run')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                        help='number of data loading workers (default: 4)')
-    parser.add_argument('--lr', default=0.02, type=float,
-                        help='initial learning rate, 0.02 is the default value for training '
-                             'on 8 gpus and 2 images_per_gpu')
-    parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                        help='momentum')
-    parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
-                        metavar='W', help='weight decay (default: 1e-4)',
-                        dest='weight_decay')
-    parser.add_argument('--lr-step-size', default=8, type=int, help='decrease lr every step-size epochs')
-    parser.add_argument('--lr-steps', default=[8, 11], nargs='+', type=int, help='decrease lr every step-size epochs')
-    parser.add_argument('--lr-gamma', default=0.1, type=float, help='decrease lr by a factor of lr-gamma')
-    parser.add_argument('--print-freq', default=20, type=int, help='print frequency')
-    parser.add_argument('--output-dir', default='.', help='path where to save')
-    parser.add_argument('--resume', default='', help='resume from checkpoint')
-    parser.add_argument('--aspect-ratio-group-factor', default=0, type=int)
-    parser.add_argument(
-        '--test-only',
-        dest='test_only',
-        help='Only test the model',
-        action='store_true',
-    )
-    parser.add_argument(
-        '--pretrained',
-        dest='pretrained',
-        help='Use pre-trained models from the modelzoo',
-        action='store_true',
-    )
-
+    argparser = argparse.ArgumentParser(description=__doc__)
+    argparser.add_argument('--config', required=True, help='yaml config file')
+    argparser.add_argument('--device', default='cuda', help='device')
     # distributed training parameters
-    parser.add_argument('--world-size', default=1, type=int,
-                        help='number of distributed processes')
-    parser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
-    return parser
-
-
-def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
-    model.train()
-    metric_logger = misc_util.MetricLogger(delimiter='  ')
-    metric_logger.add_meter('lr', misc_util.SmoothedValue(window_size=1, fmt='{value:.6f}'))
-    header = 'Epoch: [{}]'.format(epoch)
-    lr_scheduler = None
-    if epoch == 0:
-        warmup_factor = 1. / 1000
-        warmup_iters = min(1000, len(data_loader) - 1)
-        lr_scheduler = misc_util.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
-
-    for images, targets in metric_logger.log_every(data_loader, print_freq, header):
-        images = list(image.to(device) for image in images)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-        loss_dict = model(images, targets)
-        losses = sum(loss for loss in loss_dict.values())
-
-        # reduce losses over all GPUs for logging purposes
-        loss_dict_reduced = misc_util.reduce_dict(loss_dict)
-        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
-        loss_value = losses_reduced.item()
-
-        if not math.isfinite(loss_value):
-            print('Loss is {}, stopping training'.format(loss_value))
-            print(loss_dict_reduced)
-            sys.exit(1)
-
-        optimizer.zero_grad()
-        losses.backward()
-        optimizer.step()
-        if lr_scheduler is not None:
-            lr_scheduler.step()
-
-        metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
-        metric_logger.update(lr=optimizer.param_groups[0]['lr'])
-
-
-def train(model, train_data_loader, val_data_loader, train_config, device):
-    if not args.init:
-        checkpoint = torch.load(args.resume, map_location='cpu')
-
-        model_without_ddp.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-
-    for epoch in range(args.epochs):
-        if args.distributed:
-            train_sampler.set_epoch(epoch)
-        train_one_epoch(model, optimizer, train_data_loader, device, epoch, args.print_freq)
-        lr_scheduler.step()
-        if args.output_dir:
-            file_util.make_dirs(args.output_dir)
-            misc_util.save_on_master({
-                'model': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'lr_scheduler': lr_scheduler.state_dict(),
-                'args': args},
-                os.path.join(args.output_dir, 'model_{}.pth'.format(epoch)))
-
-        # evaluate after every epoch
-        evaluate(model, val_data_loader, device=device)
+    argparser.add_argument('--world-size', default=1, type=int, help='number of distributed processes')
+    argparser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
+    return argparser
 
 
 @torch.no_grad()
@@ -217,36 +117,94 @@ def evaluate(model, data_loader, device):
     return coco_evaluator
 
 
+def train_one_epoch(model, optimizer, data_loader, device, epoch, log_freq):
+    model.train()
+    metric_logger = misc_util.MetricLogger(delimiter='  ')
+    metric_logger.add_meter('lr', misc_util.SmoothedValue(window_size=1, fmt='{value:.6f}'))
+    header = 'Epoch: [{}]'.format(epoch)
+    lr_scheduler = None
+    if epoch == 0:
+        warmup_factor = 1.0 / 1000.0
+        warmup_iters = min(1000, len(data_loader) - 1)
+        lr_scheduler = misc_util.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
+
+    for images, targets in metric_logger.log_every(data_loader, log_freq, header):
+        images = list(image.to(device) for image in images)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        loss_dict = model(images, targets)
+        losses = sum(loss for loss in loss_dict.values())
+
+        # reduce losses over all GPUs for logging purposes
+        loss_dict_reduced = misc_util.reduce_dict(loss_dict)
+        losses_reduced = sum(loss for loss in loss_dict_reduced.values())
+        loss_value = losses_reduced.item()
+
+        if not math.isfinite(loss_value):
+            print('Loss is {}, stopping training'.format(loss_value))
+            print(loss_dict_reduced)
+            sys.exit(1)
+
+        optimizer.zero_grad()
+        losses.backward()
+        optimizer.step()
+        if lr_scheduler is not None:
+            lr_scheduler.step()
+
+        metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
+        metric_logger.update(lr=optimizer.param_groups[0]['lr'])
+
+
+def train(model, train_sampler, train_data_loader, val_data_loader, device, distributed, config, args, ckpt_file_path):
+    train_config = config['train']
+    optim_config = train_config['optimizer']
+    optimizer = func_util.get_optimizer(model, optim_config['type'], optim_config['params'])
+    scheduler_config = train_config['scheduler']
+    lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
+    if file_util.check_if_exists(ckpt_file_path):
+        model_util.load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
+
+    best_val_map = 0.0
+    num_epochs = train_config['num_epochs']
+    log_freq = train_config['log_freq']
+    for epoch in range(num_epochs):
+        if distributed:
+            train_sampler.set_epoch(epoch)
+
+        train_one_epoch(model, optimizer, train_data_loader, device, epoch, log_freq)
+        lr_scheduler.step()
+
+        # evaluate after every epoch
+        coco_evaluator = evaluate(model, val_data_loader, device=device)
+        # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
+        val_map = coco_evaluator.coco_eval['bbox'].stats[0]
+        if val_map > best_val_map:
+            best_val_map = val_map
+            file_util.make_parent_dirs(ckpt_file_path)
+            model_util.save_ckpt(model, optimizer, lr_scheduler, config, args, ckpt_file_path)
+
+
 def main(args):
     distributed = init_distributed_mode(args)
     config = yaml_util.load_yaml_file(args.config)
     device = torch.device(args.device)
     print(args)
 
-    # Data loading code
     print('Loading data')
     train_config = config['train']
-    num_classes, train_data_loader, val_data_loader, test_data_loader\
+    num_classes, train_sampler, train_data_loader, val_data_loader, test_data_loader\
         = data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
 
     print('Creating model')
     model_config = config['model']
-    model = model_util.get_model(model_config, device, num_classes)
+    model = model_util.get_model(model_config, num_classes)
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-
-    optim_config = train_config['optimizer']
-    optimizer = func_util.get_optimizer(model, optim_config['type'], optim_config['params'])
-    scheduler_config = train_config['scheduler']
-    lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
-    ckpt_file_path = model_config['ckpt']
-    if file_util.check_if_exists(ckpt_file_path):
-        model_util.load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
     if args.train:
         print('Start training')
         start_time = time.time()
-        train(model, train_data_loader, val_data_loader, config['train'], device)
+        train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
+              config, args, model_config['ckpt'])
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
