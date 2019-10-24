@@ -19,17 +19,12 @@ import time
 
 import torch
 import torch.utils.data
-import torchvision
-import torchvision.models.detection
-import torchvision.models.detection.mask_rcnn
-import torchvision.models.detection.mask_rcnn
+from torch import nn
 
-from myutils.common import file_util
-from structure.sampler import GroupedBatchSampler, create_aspect_ratio_groups
-from structure.transformer import ToTensor, RandomHorizontalFlip, Compose
-from utils import misc_util
+from myutils.common import file_util, yaml_util
+from myutils.pytorch import func_util
+from utils import data_util, misc_util, model_util
 from utils.coco_eval_util import CocoEvaluator
-from utils.coco_util import get_coco, get_coco_kp
 from utils.coco_util import get_coco_api_from_dataset
 
 
@@ -57,10 +52,8 @@ def init_distributed_mode(args):
         args.gpu = args.rank % torch.cuda.device_count()
     else:
         print('Not using distributed mode')
-        args.distributed = False
-        return
+        return False
 
-    args.distributed = True
     torch.cuda.set_device(args.gpu)
     args.dist_backend = 'nccl'
     print('| distributed init (rank {}): {}'.format(args.rank, args.dist_url), flush=True)
@@ -68,6 +61,7 @@ def init_distributed_mode(args):
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
+    return True
 
 
 def get_argparser():
@@ -117,24 +111,6 @@ def get_argparser():
     return parser
 
 
-def get_dataset(name, image_set, transform, data_path):
-    paths = {
-        'coco': (data_path, get_coco, 91),
-        'coco_kp': (data_path, get_coco_kp, 2)
-    }
-    p, ds_fn, num_classes = paths[name]
-    ds = ds_fn(p, image_set=image_set, transforms=transform)
-    return ds, num_classes
-
-
-def get_transform(train):
-    transforms = []
-    transforms.append(ToTensor())
-    if train:
-        transforms.append(RandomHorizontalFlip(0.5))
-    return Compose(transforms)
-
-
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
     model.train()
     metric_logger = misc_util.MetricLogger(delimiter='  ')
@@ -172,16 +148,30 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
         metric_logger.update(lr=optimizer.param_groups[0]['lr'])
 
 
-def _get_iou_types(model):
-    model_without_ddp = model
-    if isinstance(model, torch.nn.parallel.DistributedDataParallel):
-        model_without_ddp = model.module
-    iou_types = ['bbox']
-    if isinstance(model_without_ddp, torchvision.models.detection.MaskRCNN):
-        iou_types.append('segm')
-    if isinstance(model_without_ddp, torchvision.models.detection.KeypointRCNN):
-        iou_types.append('keypoints')
-    return iou_types
+def train(model, train_data_loader, val_data_loader, train_config, device):
+    if not args.init:
+        checkpoint = torch.load(args.resume, map_location='cpu')
+
+        model_without_ddp.load_state_dict(checkpoint['model'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
+
+    for epoch in range(args.epochs):
+        if args.distributed:
+            train_sampler.set_epoch(epoch)
+        train_one_epoch(model, optimizer, train_data_loader, device, epoch, args.print_freq)
+        lr_scheduler.step()
+        if args.output_dir:
+            file_util.make_dirs(args.output_dir)
+            misc_util.save_on_master({
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'lr_scheduler': lr_scheduler.state_dict(),
+                'args': args},
+                os.path.join(args.output_dir, 'model_{}.pth'.format(epoch)))
+
+        # evaluate after every epoch
+        evaluate(model, val_data_loader, device=device)
 
 
 @torch.no_grad()
@@ -195,7 +185,7 @@ def evaluate(model, data_loader, device):
     header = 'Test:'
 
     coco = get_coco_api_from_dataset(data_loader.dataset)
-    iou_types = _get_iou_types(model)
+    iou_types = model_util.get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
 
     for image, targets in metric_logger.log_every(data_loader, 100, header):
@@ -228,90 +218,39 @@ def evaluate(model, data_loader, device):
 
 
 def main(args):
-    if args.output_dir:
-        file_util.make_dirs(args.output_dir)
-
-    init_distributed_mode(args)
-    print(args)
-
+    distributed = init_distributed_mode(args)
+    config = yaml_util.load_yaml_file(args.config)
     device = torch.device(args.device)
+    print(args)
 
     # Data loading code
     print('Loading data')
-
-    dataset, num_classes = get_dataset(args.dataset, 'train', get_transform(train=True), args.data_path)
-    dataset_test, _ = get_dataset(args.dataset, 'val', get_transform(train=False), args.data_path)
-
-    print('Creating data loaders')
-    if args.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(dataset)
-        test_sampler = torch.utils.data.distributed.DistributedSampler(dataset_test)
-    else:
-        train_sampler = torch.utils.data.RandomSampler(dataset)
-        test_sampler = torch.utils.data.SequentialSampler(dataset_test)
-
-    if args.aspect_ratio_group_factor >= 0:
-        group_ids = create_aspect_ratio_groups(dataset, k=args.aspect_ratio_group_factor)
-        train_batch_sampler = GroupedBatchSampler(train_sampler, group_ids, args.batch_size)
-    else:
-        train_batch_sampler = torch.utils.data.BatchSampler(
-            train_sampler, args.batch_size, drop_last=True)
-
-    data_loader = torch.utils.data.DataLoader(
-        dataset, batch_sampler=train_batch_sampler, num_workers=args.workers,
-        collate_fn=misc_util.collate_fn)
-
-    data_loader_test = torch.utils.data.DataLoader(
-        dataset_test, batch_size=1,
-        sampler=test_sampler, num_workers=args.workers,
-        collate_fn=misc_util.collate_fn)
+    train_config = config['train']
+    num_classes, train_data_loader, val_data_loader, test_data_loader\
+        = data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
 
     print('Creating model')
-    model = torchvision.models.detection.__dict__[args.model](num_classes=num_classes,
-                                                              pretrained=args.pretrained)
-    model.to(device)
+    model_config = config['model']
+    model = model_util.get_model(model_config, device, num_classes)
+    if distributed:
+        model = nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
 
-    model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
+    optim_config = train_config['optimizer']
+    optimizer = func_util.get_optimizer(model, optim_config['type'], optim_config['params'])
+    scheduler_config = train_config['scheduler']
+    lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
+    ckpt_file_path = model_config['ckpt']
+    if file_util.check_if_exists(ckpt_file_path):
+        model_util.load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
-    params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(
-        params, lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_steps, gamma=args.lr_gamma)
-    if args.resume:
-        checkpoint = torch.load(args.resume, map_location='cpu')
-        model_without_ddp.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
-
-    if args.test_only:
-        evaluate(model, data_loader_test, device=device)
-        return
-
-    print('Start training')
-    start_time = time.time()
-    for epoch in range(args.epochs):
-        if args.distributed:
-            train_sampler.set_epoch(epoch)
-        train_one_epoch(model, optimizer, data_loader, device, epoch, args.print_freq)
-        lr_scheduler.step()
-        if args.output_dir:
-            misc_util.save_on_master({
-                'model': model_without_ddp.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'lr_scheduler': lr_scheduler.state_dict(),
-                'args': args},
-                os.path.join(args.output_dir, 'model_{}.pth'.format(epoch)))
-
-        # evaluate after every epoch
-        evaluate(model, data_loader_test, device=device)
-
-    total_time = time.time() - start_time
-    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    print('Training time {}'.format(total_time_str))
+    if args.train:
+        print('Start training')
+        start_time = time.time()
+        train(model, train_data_loader, val_data_loader, config['train'], device)
+        total_time = time.time() - start_time
+        total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+        print('Training time {}'.format(total_time_str))
+    evaluate(model, test_data_loader, device=device)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,40 @@
+dataset:
+    name: &dataset_name 'coco2017'
+    root: &data_dir !join ['./resource/data/', *dataset_name, '/']
+    num_workers: 4
+    aspect_ratio_group_factor: 0
+    splits:
+        train: 'train'
+        val: 'val'
+        test: 'val'
+
+input_shape: [3, 640, 640]
+
+model:
+    type: &model_type 'fasterrcnn_resnet50_fpn'
+    experiment: &experiment !join [*dataset_name, '-', *model_type]
+    ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
+    params:
+        depth: 50
+        num_classes: 80
+        pretrained: True
+
+train:
+    epoch:
+    batch_size: 2
+    num_logs: 50
+    optimizer:
+        type: 'SGD'
+        params:
+            lr: 0.02
+            momentum: 0.9
+            weight_decay: 0.0001
+    scheduler:
+        type: 'MultiStepLR'
+        params:
+            milestones: [8, 11]
+            gamma: 0.1
+    log: !join ['./log/org/', *experiment, '.txt']
+
+test:
+    batch_size: 1
