@@ -1,5 +1,6 @@
 dataset:
     name: &dataset_name 'coco2017'
+    task_name: 'coco_bbox'
     root: !join ['./resource/data/', *dataset_name, '/']
     num_workers: 4
     aspect_ratio_group_factor: 0

@@ -6,30 +6,30 @@ from utils import misc_util
 from utils.coco_util import get_coco, get_coco_kp
 
 
-def get_coco_dataset(name, root_dir_path, split_name, is_train):
+def get_coco_dataset(task_name, root_dir_path, split_name, is_train):
     transforms = [ToTensor()]
     if is_train:
         transforms.append(RandomHorizontalFlip(0.5))
 
     paths = {
-        'coco': (root_dir_path, get_coco, 91),
+        'coco_bbox': (root_dir_path, get_coco, 91),
         'coco_kp': (root_dir_path, get_coco_kp, 2)
     }
-    p, ds_fn, num_classes = paths[name]
+    p, ds_fn, num_classes = paths[task_name]
     ds = ds_fn(p, split_name=split_name, transforms=Compose(transforms))
     return ds, num_classes
 
 
 def get_coco_data_loaders(dataset_config, batch_size, distributed):
-    dataset_name = dataset_config['name']
+    task_name = dataset_config['task_name']
     root_dir_path = dataset_config['root']
     num_workers = dataset_config['num_workers']
     aspect_ratio_group_factor = dataset_config['aspect_ratio_group_factor']
     dataset_splits = dataset_config['splits']
 
-    train_dataset, num_classes = get_coco_dataset(dataset_name, root_dir_path, dataset_splits['train'], True)
-    val_dataset, _ = get_coco_dataset(dataset_name, root_dir_path, dataset_splits['val'], False)
-    test_dataset, _ = get_coco_dataset(dataset_name, root_dir_path, dataset_splits['test'], False)
+    train_dataset, num_classes = get_coco_dataset(task_name, root_dir_path, dataset_splits['train'], True)
+    val_dataset, _ = get_coco_dataset(task_name, root_dir_path, dataset_splits['val'], False)
+    test_dataset, _ = get_coco_dataset(task_name, root_dir_path, dataset_splits['test'], False)
 
     print('Creating data loaders')
     if distributed:
