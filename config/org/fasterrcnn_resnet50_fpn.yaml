@@ -1,7 +1,7 @@
 dataset:
     name: &dataset_name 'coco2017'
     task_name: 'coco_bbox'
-    root: !join ['./resource/data/', *dataset_name, '/']
+    root: !join ['./resource/dataset/', *dataset_name, '/']
     num_workers: 4
     aspect_ratio_group_factor: 0
     splits:
@@ -14,9 +14,9 @@ input_shape: [3, 640, 640]
 model:
     type: &model_type 'fasterrcnn_resnet50_fpn'
     experiment: &experiment !join [*dataset_name, '-', *model_type]
-    pretrained: True
     ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
     params:
+        pretrained: True
 
 train:
     num_epochs: 13
