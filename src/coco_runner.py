@@ -180,7 +180,6 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
         if val_map > best_val_map:
             best_val_map = val_map
-            file_util.make_parent_dirs(ckpt_file_path)
             model_util.save_ckpt(model, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 
