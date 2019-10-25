@@ -192,12 +192,12 @@ def main(args):
 
     print('Loading data')
     train_config = config['train']
-    num_classes, train_sampler, train_data_loader, val_data_loader, test_data_loader\
-        = data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
+    num_classes, train_sampler, train_data_loader, val_data_loader, test_data_loader =\
+        data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
 
     print('Creating model')
     model_config = config['model']
-    model = model_util.get_model(model_config, num_classes)
+    model = model_util.get_model(model_config, num_classes, device)
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
 
