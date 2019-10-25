@@ -14,11 +14,9 @@ input_shape: [3, 640, 640]
 model:
     type: &model_type 'fasterrcnn_resnet50_fpn'
     experiment: &experiment !join [*dataset_name, '-', *model_type]
+    pretrained: True
     ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
     params:
-        depth: 50
-        num_classes: 80
-        pretrained: True
 
 train:
     num_epochs: 13
