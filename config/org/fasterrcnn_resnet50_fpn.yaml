@@ -25,7 +25,7 @@ train:
     optimizer:
         type: 'SGD'
         params:
-            lr: 0.02
+            lr: 0.0075  # 0.02 / 8 * num_gpus
             momentum: 0.9
             weight_decay: 0.0001
     scheduler:
