@@ -9,7 +9,7 @@ from utils import misc_util
 def save_ckpt(model, optimizer, lr_scheduler, config, args, output_file_path):
     file_util.make_parent_dirs(output_file_path)
     model_state_dict =\
-        model.module.state_dict if isinstance(model, nn.parallel.DistributedDataParallel) else model.state_dict
+        model.module.state_dict() if isinstance(model, nn.parallel.DistributedDataParallel) else model.state_dict()
     misc_util.save_on_master({'model': model_state_dict, 'optimizer': optimizer.state_dict(),
                               'lr_scheduler': lr_scheduler.state_dict(), 'config': config, 'args': args},
                              output_file_path)
