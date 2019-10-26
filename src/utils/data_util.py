@@ -51,4 +51,4 @@ def get_coco_data_loaders(dataset_config, batch_size, distributed):
                                                   num_workers=num_workers, collate_fn=misc_util.collate_fn)
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, sampler=test_sampler,
                                                    num_workers=num_workers, collate_fn=misc_util.collate_fn)
-    return num_classes, train_sampler, train_data_loader, val_data_loader, test_data_loader
+    return train_sampler, train_data_loader, val_data_loader, test_data_loader

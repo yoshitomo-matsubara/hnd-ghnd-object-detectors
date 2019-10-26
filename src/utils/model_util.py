@@ -29,12 +29,12 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None):
     return ckpt['config'], ckpt['args']
 
 
-def get_model(model_config, num_classes, device):
+def get_model(model_config, device):
     model_type = model_config['type']
     ckpt_file_path = model_config['ckpt']
     model_params_config = model_config['params']
     if model_type in detection.__dict__:
-        model = detection.__dict__[model_type](num_classes=num_classes, **model_params_config)
+        model = detection.__dict__[model_type](**model_params_config)
     elif model_type.startswith('yolo'):
         from utils import yolo_util
         model = yolo_util.get_model('cpu', ckpt_file_path, **model_params_config)
