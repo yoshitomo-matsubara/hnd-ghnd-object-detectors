@@ -27,7 +27,7 @@ def get_model_config(model_name):
 
 
 def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
-                   progress=True, num_classes=91, **kwargs):
+              progress=True, num_classes=91, **kwargs):
     if pretrained:
         backbone_pretrained = False
 
