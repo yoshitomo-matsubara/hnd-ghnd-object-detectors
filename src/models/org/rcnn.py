@@ -26,7 +26,7 @@ def get_model_config(model_name):
     raise KeyError('model_name `{}` is not expected'.format(model_name))
 
 
-def get_rcnn_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
+def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
                    progress=True, num_classes=91, **kwargs):
     if pretrained:
         backbone_pretrained = False

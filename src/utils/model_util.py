@@ -35,7 +35,7 @@ def get_model(model_config, device):
     ckpt_file_path = model_config['ckpt']
     model_params_config = model_config['params']
     if model_type in rcnn.MODEL_CLASS_DICT:
-        model = rcnn.get_model_config(model_type, **model_params_config)
+        model = rcnn.get_model(model_type, **model_params_config)
     elif model_type.startswith('yolo'):
         from utils import yolo_util
         model = yolo_util.get_model('cpu', ckpt_file_path, **model_params_config)
