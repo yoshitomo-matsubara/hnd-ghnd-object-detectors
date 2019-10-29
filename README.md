@@ -17,4 +17,3 @@ pipenv install
 
 ## References
 -  [pytorch/vision/references/detection/](https://github.com/pytorch/vision/tree/master/references/detection)
-- DeNA's [PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)

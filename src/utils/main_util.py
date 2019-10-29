@@ -38,3 +38,13 @@ def init_distributed_mode(world_size=1, dist_url='env://'):
     torch.distributed.barrier()
     setup_for_distributed(rank == 0)
     return True, [device_id]
+
+
+def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
+    def f(x):
+        if x >= warmup_iters:
+            return 1
+        alpha = float(x) / warmup_iters
+        return warmup_factor * (1 - alpha) + alpha
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, f)

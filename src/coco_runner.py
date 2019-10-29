@@ -89,7 +89,7 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
     if epoch == 0:
         warmup_factor = 1.0 / 1000.0
         warmup_iters = min(1000, len(data_loader) - 1)
-        lr_scheduler = misc_util.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
+        lr_scheduler = main_util.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
     for images, targets in metric_logger.log_every(data_loader, log_freq, header):
         images = list(image.to(device) for image in images)
