@@ -1,6 +1,6 @@
 import random
 
-from torchvision.transforms import functional as F
+from torchvision.transforms import functional
 
 
 def _flip_coco_person_keypoints(kps, width):
@@ -45,5 +45,5 @@ class RandomHorizontalFlip(object):
 
 class ToTensor(object):
     def __call__(self, image, target):
-        image = F.to_tensor(image)
+        image = functional.to_tensor(image)
         return image, target
