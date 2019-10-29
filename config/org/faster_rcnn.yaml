@@ -36,7 +36,6 @@ train:
         params:
             milestones: [8, 11]
             gamma: 0.1
-    log: !join ['./log/org/', *experiment, '.txt']
 
 test:
     batch_size: 1
