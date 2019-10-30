@@ -20,6 +20,7 @@ def get_argparser():
     argparser = argparse.ArgumentParser(description=__doc__)
     argparser.add_argument('--config', required=True, help='yaml config file')
     argparser.add_argument('--device', default='cuda', help='device')
+    argparser.add_argument('--json', help='dictionary to overwrite config')
     argparser.add_argument('-train', action='store_true', help='train a model')
     # distributed training parameters
     argparser.add_argument('--world-size', default=1, type=int, help='number of distributed processes')
