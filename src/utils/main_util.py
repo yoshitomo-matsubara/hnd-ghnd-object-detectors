@@ -1,8 +1,14 @@
 import builtins as __builtin__
 import json
 import os
+import time
 
 import torch
+
+from models import get_iou_types
+from utils import misc_util
+from utils.coco_eval_util import CocoEvaluator
+from utils.coco_util import get_coco_api_from_dataset
 
 
 def overwrite_dict(org_dict, sub_dict):
@@ -64,3 +70,44 @@ def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
         return warmup_factor * (1 - alpha) + alpha
 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, f)
+
+
+@torch.no_grad()
+def evaluate(model, data_loader, device):
+    n_threads = torch.get_num_threads()
+    # FIXME remove this and make paste_masks_in_image run on the GPU
+    torch.set_num_threads(1)
+    cpu_device = torch.device('cpu')
+    model.eval()
+    metric_logger = misc_util.MetricLogger(delimiter='  ')
+    header = 'Test:'
+    coco = get_coco_api_from_dataset(data_loader.dataset)
+    iou_types = get_iou_types(model)
+    coco_evaluator = CocoEvaluator(coco, iou_types)
+    for image, targets in metric_logger.log_every(data_loader, 100, header):
+        image = list(img.to(device) for img in image)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+        torch.cuda.synchronize()
+        model_time = time.time()
+        outputs = model(image)
+
+        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        model_time = time.time() - model_time
+
+        res = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
+        evaluator_time = time.time()
+        coco_evaluator.update(res)
+        evaluator_time = time.time() - evaluator_time
+        metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
+
+    # gather the stats from all processes
+    metric_logger.synchronize_between_processes()
+    print('Averaged stats:', metric_logger)
+    coco_evaluator.synchronize_between_processes()
+
+    # accumulate predictions from all images
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+    torch.set_num_threads(n_threads)
+    return coco_evaluator

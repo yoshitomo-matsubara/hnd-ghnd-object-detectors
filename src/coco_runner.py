@@ -8,12 +8,10 @@ import torch
 import torch.utils.data
 from torch import nn
 
-from models import get_iou_types, get_model, load_ckpt, save_ckpt
+from models import get_model, load_ckpt, save_ckpt
 from myutils.common import file_util, yaml_util
 from myutils.pytorch import func_util
 from utils import data_util, main_util, misc_util
-from utils.coco_eval_util import CocoEvaluator
-from utils.coco_util import get_coco_api_from_dataset
 
 
 def get_argparser():
@@ -26,49 +24,6 @@ def get_argparser():
     argparser.add_argument('--world-size', default=1, type=int, help='number of distributed processes')
     argparser.add_argument('--dist-url', default='env://', help='url used to set up distributed training')
     return argparser
-
-
-@torch.no_grad()
-def evaluate(model, data_loader, device):
-    n_threads = torch.get_num_threads()
-    # FIXME remove this and make paste_masks_in_image run on the GPU
-    torch.set_num_threads(1)
-    cpu_device = torch.device('cpu')
-    model.eval()
-    metric_logger = misc_util.MetricLogger(delimiter='  ')
-    header = 'Test:'
-
-    coco = get_coco_api_from_dataset(data_loader.dataset)
-    iou_types = get_iou_types(model)
-    coco_evaluator = CocoEvaluator(coco, iou_types)
-
-    for image, targets in metric_logger.log_every(data_loader, 100, header):
-        image = list(img.to(device) for img in image)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-
-        torch.cuda.synchronize()
-        model_time = time.time()
-        outputs = model(image)
-
-        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
-        model_time = time.time() - model_time
-
-        res = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
-        evaluator_time = time.time()
-        coco_evaluator.update(res)
-        evaluator_time = time.time() - evaluator_time
-        metric_logger.update(model_time=model_time, evaluator_time=evaluator_time)
-
-    # gather the stats from all processes
-    metric_logger.synchronize_between_processes()
-    print('Averaged stats:', metric_logger)
-    coco_evaluator.synchronize_between_processes()
-
-    # accumulate predictions from all images
-    coco_evaluator.accumulate()
-    coco_evaluator.summarize()
-    torch.set_num_threads(n_threads)
-    return coco_evaluator
 
 
 def train_model(model, optimizer, data_loader, device, epoch, log_freq):
@@ -164,7 +119,7 @@ def main(args):
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
-    evaluate(model, test_data_loader, device=device)
+    main_util.evaluate(model, test_data_loader, device=device)
 
 
 if __name__ == '__main__':

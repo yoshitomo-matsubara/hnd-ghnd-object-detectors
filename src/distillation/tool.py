@@ -27,7 +27,7 @@ def train(teacher_model, student_model, train_sampler, train_data_loader, val_da
     num_epochs = train_config['num_epochs']
 
 
-def main(config, args):
+def run(config, args):
     distributed, device_ids = main_util.init_distributed_mode(args.world_size, args.dist_url)
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     teacher_model = get_model(config['teacher_model'], device)
