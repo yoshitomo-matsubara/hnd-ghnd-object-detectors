@@ -8,9 +8,10 @@ import torch
 import torch.utils.data
 from torch import nn
 
+from models import get_iou_types, get_model, load_ckpt, save_ckpt
 from myutils.common import file_util, yaml_util
 from myutils.pytorch import func_util
-from utils import data_util, main_util, misc_util, model_util
+from utils import data_util, main_util, misc_util
 from utils.coco_eval_util import CocoEvaluator
 from utils.coco_util import get_coco_api_from_dataset
 
@@ -37,7 +38,7 @@ def evaluate(model, data_loader, device):
     header = 'Test:'
 
     coco = get_coco_api_from_dataset(data_loader.dataset)
-    iou_types = model_util.get_iou_types(model)
+    iou_types = get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
 
     for image, targets in metric_logger.log_every(data_loader, 100, header):
@@ -113,7 +114,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
     if file_util.check_if_exists(ckpt_file_path):
-        model_util.load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
+        load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
     best_val_map = 0.0
     num_epochs = train_config['num_epochs']
@@ -131,7 +132,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
         if val_map > best_val_map:
             best_val_map = val_map
-            model_util.save_ckpt(model, optimizer, lr_scheduler, config, args, ckpt_file_path)
+            save_ckpt(model, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 
 def main(args):
@@ -150,7 +151,7 @@ def main(args):
 
     print('Creating model')
     model_config = config['model']
-    model = model_util.get_model(model_config, device)
+    model = get_model(model_config, device)
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)
 
