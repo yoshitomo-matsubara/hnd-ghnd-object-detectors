@@ -21,6 +21,11 @@ MODEL_CLASS_DICT = {
     'keypoint_rcnn': (KeypointRCNN, 'keypointrcnn_resnet50_fpn_coco')
 }
 
+BACKBONE_FACTOR_DICT = {
+    'resnet18': 4,
+    'resnet50': 1
+}
+
 
 def get_model_config(model_name):
     if model_name in MODEL_CLASS_DICT:
@@ -38,8 +43,8 @@ def resnet_fpn_backbone(backbone_name, pretrained):
             parameter.requires_grad_(False)
 
     return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
-
-    in_channels_stage2 = backbone.inplanes // 8
+    factor = BACKBONE_FACTOR_DICT[backbone_name]
+    in_channels_stage2 = backbone.inplanes // 8 * factor
     in_channels_list = [
         in_channels_stage2,
         in_channels_stage2 * 2,
