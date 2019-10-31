@@ -12,20 +12,20 @@ dataset:
 teacher_model:
     name: &teacher_model_name 'faster_rcnn'
     params:
-        backbone_name: &teacher_backbone_name 'resnet50'
+        backbone_name: &teacher_backbone_name 'resnet101'
         backbone_pretrained: True
         num_classes: 91
-        pretrained: True
+        pretrained: False
     experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '_backbone-', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/org/', *teacher_experiment, '.pt']
 
 student_model:
     name: &student_model_name 'faster_rcnn'
     params:
-        backbone_name: &student_backbone_name 'resnet18'
+        backbone_name: &student_backbone_name 'resnet50'
         backbone_pretrained: True
         num_classes: 91
-        pretrained: False
+        pretrained: True
     experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '_backbone-', *student_backbone_name, '_from_', *teacher_model_name, '_backbone-', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
 
