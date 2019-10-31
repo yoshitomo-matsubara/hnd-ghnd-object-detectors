@@ -11,7 +11,7 @@ class CustomLoss(nn.Module):
         for loss_name, loss_config in criterion_config['terms'].items():
             sub_criterion_config = loss_config['criterion']
             sub_criterion = func_util.get_loss(sub_criterion_config['type'], sub_criterion_config['params'])
-            term_dict[loss_name] = (sub_criterion_config['ts_modules'], sub_criterion, sub_criterion_config['factor'])
+            term_dict[loss_name] = (loss_config['ts_modules'], sub_criterion, loss_config['factor'])
         self.term_dict = term_dict
 
     def forward(self, *args, **kwargs):
