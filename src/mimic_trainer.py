@@ -13,15 +13,13 @@ from utils import mimic_util, model_util
 def get_argparser():
     argparser = argparse.ArgumentParser(description='Mimic Trainer')
     argparser.add_argument('--config', required=True, help='yaml file path')
-    argparser.add_argument('--epoch', type=int, help='epoch (higher priority than config if set)')
-    argparser.add_argument('--lr', type=float, help='learning rate (higher priority than config if set)')
-    argparser.add_argument('--log', default='./log/', help='log dir path')
+    argparser.add_argument('--json', help='dictionary to overwrite config')
     argparser.add_argument('-init', action='store_true', help='initialize checkpoint')
     return argparser
 
 
 def train(student_model, teacher_model, train_loader, optimizer, criterion, epoch, device, interval):
-    logging.info('\nEpoch: %d' % epoch)
+    logging.info('\nEpoch: {}'.format(epoch))
     student_model.train()
     teacher_model.eval()
     num_samples = len(train_loader.dataset)
@@ -91,7 +89,7 @@ def save_ckpt(student_model, epoch, best_avg_loss, ckpt_file_path, teacher_model
 
 
 def main(args):
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if device == 'cuda':
         cudnn.benchmark = True
 

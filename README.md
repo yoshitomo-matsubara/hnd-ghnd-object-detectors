@@ -2,11 +2,28 @@
 
 ## Requirements
 - Python 3.6
-- PyTorch 0.4.1 (torch, torchvision)
-- Matplotlib
-- Numpy
+- pipenv
 - [myutils](https://github.com/yoshitomo-matsubara/myutils)
 
+## How to clone
+```
+git clone https://github.com/yoshitomo-matsubara/distilled-object-detector.git
+cd distilled-object-detector/
+git submodule init
+git submodule update --recursive --remote
+pipenv install
+```
+
+## Note from torchvision reference
+PyTorch Detection Training.
+
+To run in a multi-gpu environment, use the distributed launcher::
+```
+pipenv run python -m torch.distributed.launch --nproc_per_node=$NGPU --use_env src/coco_runner.py ... --world-size $NGPU
+```
+The default hyperparameters are tuned for training on 8 gpus and 2 images per gpu.
+    --lr 0.02 --batch-size 2 --world-size 8  
+If you use different number of gpus, the learning rate should be changed to 0.02/8*$NGPU.
+
 ## References
-- Yann Henon's [pytorch-retinanet](https://github.com/yhenon/pytorch-retinanet)
-- DeNA's [PyTorch_YOLOv3](https://github.com/DeNA/PyTorch_YOLOv3)
+-  [pytorch/vision/references/detection/](https://github.com/pytorch/vision/tree/master/references/detection)

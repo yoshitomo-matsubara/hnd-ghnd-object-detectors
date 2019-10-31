@@ -1,0 +1,75 @@
+dataset:
+    name: &dataset_name 'coco2017'
+    task_name: 'coco_bbox'
+    root: !join ['./resource/dataset/', *dataset_name, '/']
+    num_workers: 4
+    aspect_ratio_group_factor: 0
+    splits:
+        train: 'train'
+        val: 'val'
+        test: 'val'
+
+teacher_model:
+    name: &teacher_model_name 'faster_rcnn'
+    params:
+        backbone_name: &teacher_backbone_name 'resnet101'
+        backbone_pretrained: True
+        num_classes: 91
+        pretrained: False
+    experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '_backbone-', *teacher_backbone_name]
+    ckpt: !join ['./resource/ckpt/org/', *teacher_experiment, '.pt']
+
+student_model:
+    name: &student_model_name 'faster_rcnn'
+    params:
+        backbone_name: &student_backbone_name 'resnet50'
+        backbone_pretrained: True
+        num_classes: 91
+        pretrained: True
+    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '_backbone-', *student_backbone_name, '_from_', *teacher_model_name, '_backbone-', *teacher_backbone_name]
+    ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
+
+train:
+    num_epochs: 13
+    batch_size: 2
+    log_freq: 50
+    optimizer:
+        type: 'SGD'
+        params:
+            lr: 0.0075  # 0.02 / 8 * num_gpus
+            momentum: 0.9
+            weight_decay: 0.0001
+    criterion:
+        type: 'hkd4rcnn'
+        params:
+            org_loss_factor: 1.0
+        terms:
+            fpn:
+                ts_modules: ['backbone.fpn', 'backbone.fpn']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'mean'
+                factor: 0.5
+            roi_align:
+                ts_modules: ['roi_heads.box_roi_pool', 'roi_heads.box_roi_pool']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'mean'
+                factor: 30.0
+            logit:
+                ts_modules: ['roi_heads.box_predictor', 'roi_heads.box_predictor']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 30.0
+    scheduler:
+        type: 'MultiStepLR'
+        params:
+            milestones: [8, 11]
+            gamma: 0.1
+
+test:
+    batch_size: 1
