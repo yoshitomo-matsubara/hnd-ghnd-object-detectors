@@ -1,9 +1,10 @@
-from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+from torchvision.models import resnet
+from torchvision.models.detection.backbone_utils import BackboneWithFPN
 from torchvision.models.detection.faster_rcnn import FasterRCNN
 from torchvision.models.detection.keypoint_rcnn import KeypointRCNN
 from torchvision.models.detection.mask_rcnn import MaskRCNN
 from torchvision.models.utils import load_state_dict_from_url
-from torchvision.models import resnet
+from torchvision.ops import misc as misc_nn_ops
 
 MODEL_URL_DICT = {
     'fasterrcnn_resnet50_fpn_coco':
@@ -47,7 +48,6 @@ def resnet_fpn_backbone(backbone_name, pretrained):
     ]
     out_channels = 256
     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
-
 
 
 def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
