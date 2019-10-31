@@ -10,24 +10,24 @@ dataset:
         test: 'val'
 
 teacher_model:
-    name: &model_name 'faster_rcnn'
+    name: &teacher_model_name 'faster_rcnn'
     params:
-        backbone_name: &backbone_name 'resnet50'
+        backbone_name: &teacher_backbone_name 'resnet50'
         backbone_pretrained: True
         num_classes: 91
         pretrained: True
-    experiment: &experiment !join [*dataset_name, '-', *model_name, '_backbone-', *backbone_name]
-    ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
+    experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '_backbone-', *teacher_backbone_name]
+    ckpt: !join ['./resource/ckpt/', *teacher_experiment, '.pt']
 
 student_model:
-    name: &model_name 'faster_rcnn'
+    name: &student_model_name 'faster_rcnn'
     params:
-        backbone_name: &backbone_name 'resnet18'
+        backbone_name: &student_backbone_name 'resnet18'
         backbone_pretrained: True
         num_classes: 91
         pretrained: True
-    experiment: &experiment !join [*dataset_name, '-', *model_name, '_backbone-', *backbone_name]
-    ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
+    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '_backbone-', *student_backbone_name]
+    ckpt: !join ['./resource/ckpt/', *student_experiment, '.pt']
 
 train:
     num_epochs: 13
