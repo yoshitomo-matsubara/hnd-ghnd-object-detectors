@@ -31,7 +31,7 @@ class HKDLoss4RCNN(CustomLoss):
     @staticmethod
     def loss_as_dict(teacher_output, student_output, criterion, mean=True):
         sum_loss = sum(criterion(student_output[key], teacher_output[key]) for key in teacher_output.keys())
-        return sum_loss / len(teacher_output.keys) if mean else sum_loss
+        return sum_loss / len(teacher_output.keys()) if mean else sum_loss
 
     def forward(self, output_dict, org_loss_dict):
         kd_loss_dict = dict()
