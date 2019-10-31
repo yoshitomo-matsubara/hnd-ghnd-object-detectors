@@ -83,7 +83,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         lr_scheduler.step()
 
         # evaluate after every epoch
-        coco_evaluator = evaluate(model, val_data_loader, device=device)
+        coco_evaluator = main_util.evaluate(model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
         if val_map > best_val_map:

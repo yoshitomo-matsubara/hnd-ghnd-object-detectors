@@ -17,7 +17,7 @@ class DistillationBox(nn.Module):
             index = 0 if self.__dict__['is_teacher'] else 1
             output_dict[key][index] = (self.__dict__['path_from_root'], output)
 
-        for loss_name, ((teacher_path, student_path), _, factor) in criterion_config['terms'].items():
+        for loss_name, ([teacher_path, student_path], _, factor) in criterion_config['terms'].items():
             teacher_module = getattr(self.teacher_model, teacher_path)
             student_module = getattr(self.student_model, student_path)
             teacher_module.__dict__['loss_name'] = loss_name
