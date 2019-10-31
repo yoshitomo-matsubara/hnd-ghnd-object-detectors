@@ -95,7 +95,8 @@ def main(args):
     train_sampler, train_data_loader, val_data_loader, test_data_loader = \
         data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
     if args.distill:
-        distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader, device, config, args)
+        distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
+                device, distributed, config, args)
     evaluate(teacher_model, student_model, test_data_loader, device)
 
 
