@@ -45,7 +45,7 @@ train:
             org_loss_factor: 1.0
         terms:
             fpn:
-                ts_modules: ['backbone.body.fpn', 'backbone.body.fpn']
+                ts_modules: ['backbone.fpn', 'backbone.fpn']
                 criterion:
                     type: 'MSELoss'
                     params:
