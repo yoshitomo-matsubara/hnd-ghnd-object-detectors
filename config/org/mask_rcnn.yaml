@@ -19,7 +19,7 @@ model:
         num_classes: 91
         pretrained: True
     experiment: &experiment !join [*dataset_name, '-', *model_name, '_backbone-', *backbone_name]
-    ckpt: !join ['./resource/ckpt/', *experiment, '.pt']
+    ckpt: !join ['./resource/ckpt/org/', *experiment, '.pt']
 
 train:
     num_epochs: 13
