@@ -37,7 +37,7 @@ class HKDLoss4RCNN(CustomLoss):
         kd_loss_dict = dict()
         for loss_name, ((teacher_path, teacher_output), (student_path, student_output)) in output_dict.items():
             _, criterion, factor = self.term_dict[loss_name]
-            if teacher_path == 'backbone.body.fpn':
+            if teacher_path == 'backbone.fpn':
                 kd_loss_dict[loss_name] = self.loss_as_dict(teacher_output, student_output, criterion) * factor
             elif teacher_path == 'roi_heads.box_predictor':
                 # TODO: check shape of each output to see #proposals
