@@ -3,6 +3,7 @@ from torchvision.models.detection.faster_rcnn import FasterRCNN
 from torchvision.models.detection.keypoint_rcnn import KeypointRCNN
 from torchvision.models.detection.mask_rcnn import MaskRCNN
 from torchvision.models.utils import load_state_dict_from_url
+from torchvision.models import resnet
 
 MODEL_URL_DICT = {
     'fasterrcnn_resnet50_fpn_coco':
@@ -24,6 +25,29 @@ def get_model_config(model_name):
     if model_name in MODEL_CLASS_DICT:
         return MODEL_CLASS_DICT[model_name]
     raise KeyError('model_name `{}` is not expected'.format(model_name))
+
+
+def resnet_fpn_backbone(backbone_name, pretrained):
+    backbone = resnet.__dict__[backbone_name](
+        pretrained=pretrained,
+        norm_layer=misc_nn_ops.FrozenBatchNorm2d)
+    # freeze layers
+    for name, parameter in backbone.named_parameters():
+        if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+            parameter.requires_grad_(False)
+
+    return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
+
+    in_channels_stage2 = backbone.inplanes // 8
+    in_channels_list = [
+        in_channels_stage2,
+        in_channels_stage2 * 2,
+        in_channels_stage2 * 4,
+        in_channels_stage2 * 8,
+    ]
+    out_channels = 256
+    return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
+
 
 
 def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
