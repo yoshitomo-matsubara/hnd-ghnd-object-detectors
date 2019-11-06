@@ -75,7 +75,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     best_val_map = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
-    for epoch in range(num_epochs):
+    for epoch in range(1, num_epochs + 1):
         if distributed:
             train_sampler.set_epoch(epoch)
 
