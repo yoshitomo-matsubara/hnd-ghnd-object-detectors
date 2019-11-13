@@ -1,4 +1,5 @@
 .idea/
-.editorconfig
+.ipynb_checkpoints/
 __pycache__/
 resource/
+.editorconfig
