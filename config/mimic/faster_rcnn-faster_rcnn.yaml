@@ -16,7 +16,7 @@ teacher_model:
         backbone_pretrained: True
         num_classes: 91
         pretrained: False
-    experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '_backbone-', *teacher_backbone_name]
+    experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '-backbone_', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/org/', *teacher_experiment, '.pt']
 
 student_model:
@@ -26,7 +26,7 @@ student_model:
         backbone_pretrained: True
         num_classes: 91
         pretrained: True
-    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '_backbone-', *student_backbone_name, '_from_', *teacher_model_name, '_backbone-', *teacher_backbone_name]
+    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
 
 train:
