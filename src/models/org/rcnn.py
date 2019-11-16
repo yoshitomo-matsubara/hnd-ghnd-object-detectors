@@ -22,14 +22,13 @@ MODEL_CLASS_DICT = {
 }
 
 
-def get_model_config(model_name):
-    if model_name in MODEL_CLASS_DICT:
-        return MODEL_CLASS_DICT[model_name]
-    raise KeyError('model_name `{}` is not expected'.format(model_name))
+def get_base_backbone(backbone_name, pretrained):
+    if backbone_name.startswith('resnet'):
+        return resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
+    raise ValueError('backbone_name `{}` is not expected'.format(backbone_name))
 
 
-def resnet_fpn_backbone(backbone_name, pretrained):
-    backbone = resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
+def get_fpn_backbone(backbone):
     # freeze layers
     for name, parameter in backbone.named_parameters():
         if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
@@ -48,12 +47,23 @@ def resnet_fpn_backbone(backbone_name, pretrained):
     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
 
 
+def get_model_config(model_name):
+    if model_name in MODEL_CLASS_DICT:
+        return MODEL_CLASS_DICT[model_name]
+    raise KeyError('model_name `{}` is not expected'.format(model_name))
+
+
 def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
               progress=True, num_classes=91, custom_backbone=None, **kwargs):
     if pretrained:
         backbone_pretrained = False
 
-    backbone = resnet_fpn_backbone(backbone_name, backbone_pretrained) if custom_backbone is None else custom_backbone
+    if custom_backbone is None:
+        base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
+        backbone = get_fpn_backbone(base_backbone)
+    else:
+        backbone = custom_backbone
+
     model_class, pretrained_key = get_model_config(model_name)
     model = model_class(backbone, num_classes, **kwargs)
     if pretrained and backbone_name == 'resnet50':
