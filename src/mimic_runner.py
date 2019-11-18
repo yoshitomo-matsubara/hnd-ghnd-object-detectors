@@ -35,7 +35,6 @@ def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_fr
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         loss = distillation_box(images, targets)
-        loss = loss.item()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
