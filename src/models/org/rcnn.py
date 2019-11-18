@@ -44,7 +44,7 @@ class CustomRCNNTransform(GeneralizedRCNNTransform):
             image[None], scale_factor=scale_factor, mode='bilinear', align_corners=False)[0]
 
         if target is None:
-            return image, target, size
+            return image, target
 
         bbox = target["boxes"]
         bbox = resize_boxes(bbox, (h, w), image.shape[-2:])
