@@ -1,10 +1,360 @@
+import random
+from collections import OrderedDict
+
+import torch
+from torch import nn
 from torchvision.models import resnet
 from torchvision.models.detection.backbone_utils import BackboneWithFPN
-from torchvision.models.detection.faster_rcnn import FasterRCNN
-from torchvision.models.detection.keypoint_rcnn import KeypointRCNN
-from torchvision.models.detection.mask_rcnn import MaskRCNN
+from torchvision.models.detection.faster_rcnn import TwoMLPHead, FastRCNNPredictor
+from torchvision.models.detection.image_list import ImageList
+from torchvision.models.detection.keypoint_rcnn import KeypointRCNNHeads, KeypointRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredictor
+from torchvision.models.detection.roi_heads import RoIHeads
+from torchvision.models.detection.rpn import AnchorGenerator, RPNHead, RegionProposalNetwork
+from torchvision.models.detection.transform import GeneralizedRCNNTransform, resize_boxes, resize_keypoints
 from torchvision.models.utils import load_state_dict_from_url
+from torchvision.ops import MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
+
+
+class CustomRCNNTransform(GeneralizedRCNNTransform):
+    def __init__(self, min_size, max_size, image_mean, image_std):
+        super().__init__(min_size, max_size, image_mean, image_std)
+        self.random_resize = True
+
+    def update_resize_mode(self, random_resize):
+        self.random_resize = random_resize
+
+    def resize(self, image, target, fixed_size=None):
+        h, w = image.shape[-2:]
+        im_shape = torch.tensor(image.shape[-2:])
+        min_size = float(torch.min(im_shape))
+        max_size = float(torch.max(im_shape))
+        if fixed_size is not None:
+            size = fixed_size
+        elif self.training:
+            size = random.choice(self.min_size)
+        else:
+            # FIXME assume for now that testing uses the largest scale
+            size = self.min_size[-1]
+        scale_factor = size / min_size
+        if max_size * scale_factor > self.max_size:
+            scale_factor = self.max_size / max_size
+        image = torch.nn.functional.interpolate(
+            image[None], scale_factor=scale_factor, mode='bilinear', align_corners=False)[0]
+
+        if target is None:
+            return image, target, size
+
+        bbox = target["boxes"]
+        bbox = resize_boxes(bbox, (h, w), image.shape[-2:])
+        target["boxes"] = bbox
+
+        if "masks" in target:
+            mask = target["masks"]
+            mask = misc_nn_ops.interpolate(mask[None].float(), scale_factor=scale_factor)[0].byte()
+            target["masks"] = mask
+
+        if "keypoints" in target:
+            keypoints = target["keypoints"]
+            keypoints = resize_keypoints(keypoints, (h, w), image.shape[-2:])
+            target["keypoints"] = keypoints
+        return image, target
+
+    def forward(self, images, targets=None, fixed_sizes=None):
+        images = [img for img in images]
+        for i in range(len(images)):
+            image = images[i]
+            target = targets[i] if targets is not None else targets
+            if image.dim() != 3:
+                raise ValueError("images is expected to be a list of 3d tensors "
+                                 "of shape [C, H, W], got {}".format(image.shape))
+            image = self.normalize(image)
+            image, target = self.resize(image, target, fixed_sizes[i] if fixed_sizes is not None else None)
+            images[i] = image
+            if targets is not None:
+                targets[i] = target
+
+        image_sizes = [img.shape[-2:] for img in images]
+        images = self.batch_images(images)
+        image_list = ImageList(images, image_sizes)
+        return image_list, targets
+
+
+class CustomRCNN(nn.Module):
+    """
+    Main class for Generalized R-CNN.
+    Arguments:
+        backbone (nn.Module):
+        rpn (nn.Module):
+        heads (nn.Module): takes the features + the proposals from the RPN and computes
+            detections / masks from it.
+        transform (nn.Module): performs the data transformation from the inputs to feed into
+            the model
+    """
+
+    def __init__(self, backbone, rpn, roi_heads, transform):
+        super().__init__()
+        self.transform = transform
+        self.backbone = backbone
+        self.rpn = rpn
+        self.roi_heads = roi_heads
+
+    def forward(self, images, targets=None, fixed_sizes=None):
+        if self.training and targets is None:
+            raise ValueError("In training mode, targets should be passed")
+        original_image_sizes = [img.shape[-2:] for img in images]
+        images, targets = self.transform(images, targets, fixed_sizes)
+        features = self.backbone(images.tensors)
+        if isinstance(features, torch.Tensor):
+            features = OrderedDict([(0, features)])
+        proposals, proposal_losses = self.rpn(images, features, targets)
+        detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
+        detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)
+
+        losses = {}
+        losses.update(detector_losses)
+        losses.update(proposal_losses)
+
+        if self.training:
+            return losses
+        return detections
+
+
+class FasterRCNN(CustomRCNN):
+    def __init__(self, backbone, num_classes=None,
+                 # transform parameters
+                 min_size=800, max_size=1333,
+                 image_mean=None, image_std=None,
+                 # RPN parameters
+                 rpn_anchor_generator=None, rpn_head=None,
+                 rpn_pre_nms_top_n_train=2000, rpn_pre_nms_top_n_test=1000,
+                 rpn_post_nms_top_n_train=2000, rpn_post_nms_top_n_test=1000,
+                 rpn_nms_thresh=0.7,
+                 rpn_fg_iou_thresh=0.7, rpn_bg_iou_thresh=0.3,
+                 rpn_batch_size_per_image=256, rpn_positive_fraction=0.5,
+                 # Box parameters
+                 box_roi_pool=None, box_head=None, box_predictor=None,
+                 box_score_thresh=0.05, box_nms_thresh=0.5, box_detections_per_img=100,
+                 box_fg_iou_thresh=0.5, box_bg_iou_thresh=0.5,
+                 box_batch_size_per_image=512, box_positive_fraction=0.25,
+                 bbox_reg_weights=None):
+
+        if not hasattr(backbone, "out_channels"):
+            raise ValueError(
+                "backbone should contain an attribute out_channels "
+                "specifying the number of output channels (assumed to be the "
+                "same for all the levels)")
+
+        assert isinstance(rpn_anchor_generator, (AnchorGenerator, type(None)))
+        assert isinstance(box_roi_pool, (MultiScaleRoIAlign, type(None)))
+
+        if num_classes is not None:
+            if box_predictor is not None:
+                raise ValueError("num_classes should be None when box_predictor is specified")
+        else:
+            if box_predictor is None:
+                raise ValueError("num_classes should not be None when box_predictor "
+                                 "is not specified")
+
+        out_channels = backbone.out_channels
+
+        if rpn_anchor_generator is None:
+            anchor_sizes = ((32,), (64,), (128,), (256,), (512,))
+            aspect_ratios = ((0.5, 1.0, 2.0),) * len(anchor_sizes)
+            rpn_anchor_generator = AnchorGenerator(
+                anchor_sizes, aspect_ratios
+            )
+        if rpn_head is None:
+            rpn_head = RPNHead(
+                out_channels, rpn_anchor_generator.num_anchors_per_location()[0]
+            )
+
+        rpn_pre_nms_top_n = dict(training=rpn_pre_nms_top_n_train, testing=rpn_pre_nms_top_n_test)
+        rpn_post_nms_top_n = dict(training=rpn_post_nms_top_n_train, testing=rpn_post_nms_top_n_test)
+
+        rpn = RegionProposalNetwork(
+            rpn_anchor_generator, rpn_head,
+            rpn_fg_iou_thresh, rpn_bg_iou_thresh,
+            rpn_batch_size_per_image, rpn_positive_fraction,
+            rpn_pre_nms_top_n, rpn_post_nms_top_n, rpn_nms_thresh)
+
+        if box_roi_pool is None:
+            box_roi_pool = MultiScaleRoIAlign(
+                featmap_names=[0, 1, 2, 3],
+                output_size=7,
+                sampling_ratio=2)
+
+        if box_head is None:
+            resolution = box_roi_pool.output_size[0]
+            representation_size = 1024
+            box_head = TwoMLPHead(
+                out_channels * resolution ** 2,
+                representation_size)
+
+        if box_predictor is None:
+            representation_size = 1024
+            box_predictor = FastRCNNPredictor(
+                representation_size,
+                num_classes)
+
+        roi_heads = RoIHeads(
+            # Box
+            box_roi_pool, box_head, box_predictor,
+            box_fg_iou_thresh, box_bg_iou_thresh,
+            box_batch_size_per_image, box_positive_fraction,
+            bbox_reg_weights,
+            box_score_thresh, box_nms_thresh, box_detections_per_img)
+
+        if image_mean is None:
+            image_mean = [0.485, 0.456, 0.406]
+
+        if image_std is None:
+            image_std = [0.229, 0.224, 0.225]
+
+        transform = CustomRCNNTransform(min_size, max_size, image_mean, image_std)
+        super(FasterRCNN, self).__init__(backbone, rpn, roi_heads, transform)
+
+
+class MaskRCNN(FasterRCNN):
+    def __init__(self, backbone, num_classes=None,
+                 # transform parameters
+                 min_size=800, max_size=1333,
+                 image_mean=None, image_std=None,
+                 # RPN parameters
+                 rpn_anchor_generator=None, rpn_head=None,
+                 rpn_pre_nms_top_n_train=2000, rpn_pre_nms_top_n_test=1000,
+                 rpn_post_nms_top_n_train=2000, rpn_post_nms_top_n_test=1000,
+                 rpn_nms_thresh=0.7,
+                 rpn_fg_iou_thresh=0.7, rpn_bg_iou_thresh=0.3,
+                 rpn_batch_size_per_image=256, rpn_positive_fraction=0.5,
+                 # Box parameters
+                 box_roi_pool=None, box_head=None, box_predictor=None,
+                 box_score_thresh=0.05, box_nms_thresh=0.5, box_detections_per_img=100,
+                 box_fg_iou_thresh=0.5, box_bg_iou_thresh=0.5,
+                 box_batch_size_per_image=512, box_positive_fraction=0.25,
+                 bbox_reg_weights=None,
+                 # Mask parameters
+                 mask_roi_pool=None, mask_head=None, mask_predictor=None):
+
+        assert isinstance(mask_roi_pool, (MultiScaleRoIAlign, type(None)))
+
+        if num_classes is not None:
+            if mask_predictor is not None:
+                raise ValueError("num_classes should be None when mask_predictor is specified")
+
+        out_channels = backbone.out_channels
+
+        if mask_roi_pool is None:
+            mask_roi_pool = MultiScaleRoIAlign(
+                featmap_names=[0, 1, 2, 3],
+                output_size=14,
+                sampling_ratio=2)
+
+        if mask_head is None:
+            mask_layers = (256, 256, 256, 256)
+            mask_dilation = 1
+            mask_head = MaskRCNNHeads(out_channels, mask_layers, mask_dilation)
+
+        if mask_predictor is None:
+            mask_predictor_in_channels = 256  # == mask_layers[-1]
+            mask_dim_reduced = 256
+            mask_predictor = MaskRCNNPredictor(mask_predictor_in_channels,
+                                               mask_dim_reduced, num_classes)
+
+        super(MaskRCNN, self).__init__(
+            backbone, num_classes,
+            # transform parameters
+            min_size, max_size,
+            image_mean, image_std,
+            # RPN-specific parameters
+            rpn_anchor_generator, rpn_head,
+            rpn_pre_nms_top_n_train, rpn_pre_nms_top_n_test,
+            rpn_post_nms_top_n_train, rpn_post_nms_top_n_test,
+            rpn_nms_thresh,
+            rpn_fg_iou_thresh, rpn_bg_iou_thresh,
+            rpn_batch_size_per_image, rpn_positive_fraction,
+            # Box parameters
+            box_roi_pool, box_head, box_predictor,
+            box_score_thresh, box_nms_thresh, box_detections_per_img,
+            box_fg_iou_thresh, box_bg_iou_thresh,
+            box_batch_size_per_image, box_positive_fraction,
+            bbox_reg_weights)
+
+        self.roi_heads.mask_roi_pool = mask_roi_pool
+        self.roi_heads.mask_head = mask_head
+        self.roi_heads.mask_predictor = mask_predictor
+
+
+class KeypointRCNN(FasterRCNN):
+    def __init__(self, backbone, num_classes=None,
+                 # transform parameters
+                 min_size=None, max_size=1333,
+                 image_mean=None, image_std=None,
+                 # RPN parameters
+                 rpn_anchor_generator=None, rpn_head=None,
+                 rpn_pre_nms_top_n_train=2000, rpn_pre_nms_top_n_test=1000,
+                 rpn_post_nms_top_n_train=2000, rpn_post_nms_top_n_test=1000,
+                 rpn_nms_thresh=0.7,
+                 rpn_fg_iou_thresh=0.7, rpn_bg_iou_thresh=0.3,
+                 rpn_batch_size_per_image=256, rpn_positive_fraction=0.5,
+                 # Box parameters
+                 box_roi_pool=None, box_head=None, box_predictor=None,
+                 box_score_thresh=0.05, box_nms_thresh=0.5, box_detections_per_img=100,
+                 box_fg_iou_thresh=0.5, box_bg_iou_thresh=0.5,
+                 box_batch_size_per_image=512, box_positive_fraction=0.25,
+                 bbox_reg_weights=None,
+                 # keypoint parameters
+                 keypoint_roi_pool=None, keypoint_head=None, keypoint_predictor=None,
+                 num_keypoints=17):
+
+        assert isinstance(keypoint_roi_pool, (MultiScaleRoIAlign, type(None)))
+        if min_size is None:
+            min_size = (640, 672, 704, 736, 768, 800)
+
+        if num_classes is not None:
+            if keypoint_predictor is not None:
+                raise ValueError("num_classes should be None when keypoint_predictor is specified")
+
+        out_channels = backbone.out_channels
+
+        if keypoint_roi_pool is None:
+            keypoint_roi_pool = MultiScaleRoIAlign(
+                featmap_names=[0, 1, 2, 3],
+                output_size=14,
+                sampling_ratio=2)
+
+        if keypoint_head is None:
+            keypoint_layers = tuple(512 for _ in range(8))
+            keypoint_head = KeypointRCNNHeads(out_channels, keypoint_layers)
+
+        if keypoint_predictor is None:
+            keypoint_dim_reduced = 512  # == keypoint_layers[-1]
+            keypoint_predictor = KeypointRCNNPredictor(keypoint_dim_reduced, num_keypoints)
+
+        super(KeypointRCNN, self).__init__(
+            backbone, num_classes,
+            # transform parameters
+            min_size, max_size,
+            image_mean, image_std,
+            # RPN-specific parameters
+            rpn_anchor_generator, rpn_head,
+            rpn_pre_nms_top_n_train, rpn_pre_nms_top_n_test,
+            rpn_post_nms_top_n_train, rpn_post_nms_top_n_test,
+            rpn_nms_thresh,
+            rpn_fg_iou_thresh, rpn_bg_iou_thresh,
+            rpn_batch_size_per_image, rpn_positive_fraction,
+            # Box parameters
+            box_roi_pool, box_head, box_predictor,
+            box_score_thresh, box_nms_thresh, box_detections_per_img,
+            box_fg_iou_thresh, box_bg_iou_thresh,
+            box_batch_size_per_image, box_positive_fraction,
+            bbox_reg_weights)
+
+        self.roi_heads.keypoint_roi_pool = keypoint_roi_pool
+        self.roi_heads.keypoint_head = keypoint_head
+        self.roi_heads.keypoint_predictor = keypoint_predictor
+
 
 MODEL_URL_DICT = {
     'fasterrcnn_resnet50_fpn_coco':

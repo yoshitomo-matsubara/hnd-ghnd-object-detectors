@@ -2,9 +2,9 @@ import torch
 from torch import nn
 from torchvision.models import detection
 
+from models.org import rcnn
 from myutils.common import file_util
 from utils import misc_util
-from models.org import rcnn
 
 
 def save_ckpt(model, optimizer, lr_scheduler, config, args, output_file_path):
@@ -52,8 +52,8 @@ def get_iou_types(model):
         model_without_ddp = model.module
 
     iou_type_list = ['bbox']
-    if isinstance(model_without_ddp, detection.MaskRCNN):
+    if isinstance(model_without_ddp, (detection.MaskRCNN, rcnn.MaskRCNN)):
         iou_type_list.append('segm')
-    if isinstance(model_without_ddp, detection.KeypointRCNN):
+    if isinstance(model_without_ddp, (detection.KeypointRCNN, rcnn.KeypointRCNN)):
         iou_type_list.append('keypoints')
     return iou_type_list
