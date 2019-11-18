@@ -33,9 +33,14 @@ class DistillationBox(nn.Module):
         self.require_adjustment = isinstance(self.student_model, KeypointRCNN)
 
     def forward(self, images, targets):
-        fixed_sizes = [random.choice(self.teacher_model.min_size) for _ in images]
-        self.teacher_model(images, fixed_sizes=fixed_sizes)
-        org_loss_dict = self.student_model(images, targets, fixed_sizes=fixed_sizes)
+        if self.require_adjustment:
+            fixed_sizes = [random.choice(self.teacher_model.transform.min_size) for _ in images]
+            self.teacher_model(images, fixed_sizes=fixed_sizes)
+            org_loss_dict = self.student_model(images, targets, fixed_sizes=fixed_sizes)
+        else:
+            self.teacher_model(images)
+            org_loss_dict = self.student_model(images, targets)
+
         output_dict = dict()
         for teacher_path, student_path in self.target_module_pairs:
             teacher_dict = module_util.get_module(self.teacher_model, teacher_path).__dict__['distillation_box']
