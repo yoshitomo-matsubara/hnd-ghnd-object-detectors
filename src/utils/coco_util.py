@@ -234,6 +234,6 @@ def get_coco(root_dir_path, split_name, transforms, mode='instances', remove_non
     ann_file = os.path.join(root_dir_path, ann_file)
     dataset = CocoDetection(img_folder, ann_file, transforms=transforms)
 
-    if split_name == 'train' and remove_non_annotated_imgs:
+    if remove_non_annotated_imgs:
         dataset = _coco_remove_images_without_annotations(dataset)
     return dataset
