@@ -217,7 +217,7 @@ class CocoDetection(torchvision.datasets.CocoDetection):
         return img, target
 
 
-def get_coco(root_dir_path, split_name, transforms, mode='instances'):
+def get_coco(root_dir_path, split_name, transforms, mode='instances', remove_non_annotated_imgs=True):
     anno_file_template = '{}_{}2017.json'
     PATHS = {
         'train': ('train2017', os.path.join('annotations', anno_file_template.format(mode, 'train'))),
@@ -234,10 +234,6 @@ def get_coco(root_dir_path, split_name, transforms, mode='instances'):
     ann_file = os.path.join(root_dir_path, ann_file)
     dataset = CocoDetection(img_folder, ann_file, transforms=transforms)
 
-    if split_name == 'train':
+    if split_name == 'train' and remove_non_annotated_imgs:
         dataset = _coco_remove_images_without_annotations(dataset)
     return dataset
-
-
-def get_coco_kp(root_dir_path, split_name, transforms):
-    return get_coco(root_dir_path, split_name, transforms, mode='person_keypoints')

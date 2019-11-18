@@ -5,9 +5,15 @@ dataset:
     num_workers: 4
     aspect_ratio_group_factor: 0
     splits:
-        train: 'train'
-        val: 'val'
-        test: 'val'
+        train:
+            name: 'train'
+            remove_non_annotated_imgs: True
+        val:
+            name: 'val'
+            remove_non_annotated_imgs: False
+        test:
+            name: 'val'
+            remove_non_annotated_imgs: False
 
 teacher_model:
     name: &teacher_model_name 'faster_rcnn'
