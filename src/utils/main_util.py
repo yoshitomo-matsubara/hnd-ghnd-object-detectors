@@ -50,7 +50,7 @@ def init_distributed_mode(world_size=1, dist_url='env://'):
         device_id = rank % torch.cuda.device_count()
     else:
         print('Not using distributed mode')
-        return False
+        return False, None
 
     torch.cuda.set_device(device_id)
     dist_backend = 'nccl'
