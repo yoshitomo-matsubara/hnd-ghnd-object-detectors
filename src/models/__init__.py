@@ -18,6 +18,7 @@ def save_ckpt(model, optimizer, lr_scheduler, config, args, output_file_path):
 
 def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None):
     if not file_util.check_if_exists(ckpt_file_path):
+        print('ckpt file is not found at `{}`'.format(ckpt_file_path))
         return None, None
 
     ckpt = torch.load(ckpt_file_path, map_location='cpu')
