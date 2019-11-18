@@ -23,10 +23,13 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None):
 
     ckpt = torch.load(ckpt_file_path, map_location='cpu')
     if model is not None:
+        print('loading model parameters')
         model.load_state_dict(ckpt['model'])
     if optimizer is not None:
+        print('loading optimizer parameters')
         optimizer.load_state_dict(ckpt['optimizer'])
     if lr_scheduler is not None:
+        print('loading scheduler parameters')
         lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
     return ckpt['config'], ckpt['args']
 
