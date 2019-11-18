@@ -3,7 +3,7 @@ import torch
 from structure.sampler import GroupedBatchSampler, create_aspect_ratio_groups
 from structure.transformer import ToTensor, RandomHorizontalFlip, Compose
 from utils import misc_util
-from utils.coco_util import get_coco_dataset
+from utils.coco_util import get_coco
 
 ATTRIBUTE_DICT = {'coco_bbox': (91, 'instances'), 'coco_kp': (2, 'person_keypoints')}
 
@@ -17,8 +17,8 @@ def get_coco_dataset(task_name, root_dir_path, split_dict, is_train):
         raise KeyError('task_name `{}` is not expected'.format(task_name))
 
     num_classes, mode = ATTRIBUTE_DICT[task_name]
-    dataset = get_coco_dataset(root_dir_path, split_name=split_dict['name'], transforms=Compose(transforms), mode=mode,
-                               remove_non_annotated_imgs=split_dict['remove_non_annotated_imgs'])
+    dataset = get_coco(root_dir_path, split_name=split_dict['name'], transforms=Compose(transforms), mode=mode,
+                       remove_non_annotated_imgs=split_dict['remove_non_annotated_imgs'])
     return dataset, num_classes
 
 
