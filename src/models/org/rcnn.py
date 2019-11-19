@@ -20,10 +20,6 @@ from torchvision.ops import misc as misc_nn_ops
 class CustomRCNNTransform(GeneralizedRCNNTransform):
     def __init__(self, min_size, max_size, image_mean, image_std):
         super().__init__(min_size, max_size, image_mean, image_std)
-        self.random_resize = True
-
-    def update_resize_mode(self, random_resize):
-        self.random_resize = random_resize
 
     def resize(self, image, target, fixed_size=None):
         h, w = image.shape[-2:]
