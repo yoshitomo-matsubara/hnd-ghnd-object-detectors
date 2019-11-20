@@ -8,8 +8,32 @@ from models.custom.ext_classifier import get_ext_classifier
 from myutils.pytorch import module_util
 
 
-# Train this class in ways like with/without freeze `model` parameters
-# May need to add if statement (like isinstance(features, tuple)) right after features = self.backbone(images.tensors) in CustomRCNN
+def has_only_empty_bbox(target):
+    return all(any(o <= 1 for o in box[2:]) for box in target['boxes'])
+
+
+def count_visible_keypoints(target):
+    return sum(sum(1 for row in kp if row[2] > 0) for kp in target['keypoints'])
+
+
+def check_if_valid_target(target, min_keypoints_per_image=10):
+    # if it's empty, there is no annotation
+    if len(target) == 0:
+        return False
+    # if all boxes have close to zero area, there is no annotation
+    if has_only_empty_bbox(target):
+        return False
+    # keypoints task have a slight different criteria for considering
+    # if an annotation is valid
+    if 'keypoints' not in target:
+        return True
+    # for keypoint detection tasks, only consider valid images those
+    # containing at least min_keypoints_per_image
+    if count_visible_keypoints(target) >= min_keypoints_per_image:
+        return True
+    return False
+
+
 class ExtIntermediateLayerGetter(nn.ModuleDict):
     _version = 2
     __constants__ = ['layers']
@@ -45,9 +69,8 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
                 out[out_name] = x
                 if name == self.ext_layer_name:
                     z = self.ext_classifier(x)
-                    # if argmax(z) is negative label, return out, False to stop inference
-                    # if not self.training and z.argmax(1) == 0:
-                    #     return True or False
+                    if not self.training and len(z) == 1 and z[0].argmax() == 0:
+                        return None, None
         return out, z
 
 

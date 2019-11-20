@@ -16,6 +16,8 @@ from torchvision.models.utils import load_state_dict_from_url
 from torchvision.ops import MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
 
+from models.custom.ext_backbone import ExtIntermediateLayerGetter, check_if_valid_target
+
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
     def __init__(self, min_size, max_size, image_mean, image_std):
@@ -91,18 +93,27 @@ class CustomRCNN(nn.Module):
         original_image_sizes = [img.shape[-2:] for img in images]
         images, targets = self.transform(images, targets, fixed_sizes)
         features = self.backbone(images.tensors)
+        loss_dict = dict()
+        if isinstance(self.backbone.body, ExtIntermediateLayerGetter):
+            features, ext_logits = features
+            if self.training:
+                ext_targets = torch.FloatTensor([1 if check_if_valid_target(target) else 0 for target in targets])
+                ext_cls_loss = nn.functional.binary_cross_entropy_with_logits(ext_logits, ext_targets)
+                loss_dict.update({'ext_cls_loss': ext_cls_loss})
+            elif features is None and ext_logits is None:
+                return [{'boxex': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
+                         'scores': torch.empty(0)}]
+
         if isinstance(features, torch.Tensor):
             features = OrderedDict([(0, features)])
+
         proposals, proposal_losses = self.rpn(images, features, targets)
         detections, detector_losses = self.roi_heads(features, proposals, images.image_sizes, targets)
         detections = self.transform.postprocess(detections, images.image_sizes, original_image_sizes)
-
-        losses = {}
-        losses.update(detector_losses)
-        losses.update(proposal_losses)
-
         if self.training:
-            return losses
+            loss_dict.update(detector_losses)
+            loss_dict.update(proposal_losses)
+            return loss_dict
         return detections
 
 
