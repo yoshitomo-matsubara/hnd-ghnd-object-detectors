@@ -4,7 +4,7 @@ from torch import nn
 from torch.jit.annotations import Dict
 from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork, LastLevelMaxPool
 
-from models.custom.ext_classifier import get_ext_classifier
+from models.ext.classifier import get_ext_classifier
 from myutils.pytorch import module_util
 
 
@@ -74,6 +74,8 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
                     z = self.ext_classifier(x)
                     if not self.training and len(z) == 1 and z[0].argmax() == 0:
                         return None, None
+                    elif self.training:
+                        return out, z
         return out, z
 
 
@@ -95,4 +97,6 @@ class ExtBackboneWithFPN(nn.Module):
         z, ext_z = self.body(x)
         if not self.training and z is None and ext_z is None:
             return None, None
+        elif self.training:
+            return z, ext_z
         return self.fpn(z), ext_z

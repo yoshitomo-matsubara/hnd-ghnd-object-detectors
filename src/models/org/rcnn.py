@@ -16,7 +16,8 @@ from torchvision.models.utils import load_state_dict_from_url
 from torchvision.ops import MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
 
-from models.custom.ext_backbone import ExtIntermediateLayerGetter, ExtBackboneWithFPN, check_if_valid_target
+from models.ext import get_ext_fpn_backbone
+from models.ext.backbone import ExtIntermediateLayerGetter
 
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
@@ -86,6 +87,7 @@ class CustomRCNN(nn.Module):
         self.backbone = backbone
         self.rpn = rpn
         self.roi_heads = roi_heads
+        self.ext_training = False
 
     def forward(self, images, targets=None, fixed_sizes=None):
         if self.training and targets is None:
@@ -96,12 +98,9 @@ class CustomRCNN(nn.Module):
         loss_dict = dict()
         if isinstance(self.backbone.body, ExtIntermediateLayerGetter):
             features, ext_logits = features
-            if self.training:
-                ext_targets = [1 if check_if_valid_target(target) else 0 for target in targets]
-                ext_targets = torch.FloatTensor(ext_targets).unsqueeze(1).to(ext_logits.device)
-                ext_cls_loss = nn.functional.binary_cross_entropy_with_logits(ext_logits, ext_targets)
-                loss_dict.update({'ext_cls_loss': ext_cls_loss})
-            elif features is None and ext_logits is None:
+            if self.ext_training:
+                return ext_logits
+            elif not self.training and features is None and ext_logits is None:
                 pred_dict = {'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
                              'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
                              'keypoints_scores': torch.empty(0, 17)}
@@ -394,25 +393,6 @@ def get_fpn_backbone(backbone):
     ]
     out_channels = 256
     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
-
-
-def get_ext_fpn_backbone(backbone, backbone_frozen=False):
-    # freeze layers
-    for name, parameter in backbone.named_parameters():
-        if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
-            parameter.requires_grad_(False)
-
-    return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
-
-    in_channels_stage2 = backbone.inplanes // 8
-    in_channels_list = [
-        in_channels_stage2,
-        in_channels_stage2 * 2,
-        in_channels_stage2 * 4,
-        in_channels_stage2 * 8,
-    ]
-    out_channels = 256
-    return ExtBackboneWithFPN(backbone, return_layers, in_channels_list, out_channels, backbone_frozen)
 
 
 def get_model_config(model_name):
