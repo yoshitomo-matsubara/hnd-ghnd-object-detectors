@@ -29,7 +29,7 @@ def get_argparser():
 
 def convert_target2ext_targets(targets, device):
     ext_targets = [1 if check_if_valid_target(target) else 0 for target in targets]
-    return torch.FloatTensor(ext_targets).unsqueeze(1).to(device)
+    return torch.FloatTensor(ext_targets).to(device)
 
 
 def train_model(model, optimizer, data_loader, device, epoch, log_freq):
@@ -50,7 +50,7 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
         ext_logits = model(images, targets)
         ext_targets = convert_target2ext_targets(targets, ext_logits.device)
 
-        ext_cls_loss = nn.functional.binary_cross_entropy_with_logits(ext_logits, ext_targets)
+        ext_cls_loss = nn.functional.cross_entropy(ext_logits, ext_targets)
         loss_dict = {'loss_ext_classifier': ext_cls_loss}
         losses = sum(loss for loss in loss_dict.values())
 
@@ -81,7 +81,7 @@ def evaluate(model, data_loader, device, split_name='Validation'):
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         ext_logits = model(images, targets)
         ext_targets = convert_target2ext_targets(targets, ext_logits.device)
-        correct_count += ext_logits.eq(ext_targets).sum().item()
+        correct_count += ext_logits.argmax(1).eq(ext_targets).sum().item()
 
     accuracy = correct_count / len(data_loader.dataset)
     print('{} accuracy: {}'.format(split_name, accuracy))

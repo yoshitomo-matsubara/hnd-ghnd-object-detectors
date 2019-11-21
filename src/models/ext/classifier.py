@@ -20,7 +20,7 @@ class Ext4ResNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((4, 4))
         )
-        self.linear = nn.Linear(input_channel // 8 * 4 * 4, 1)
+        self.linear = nn.Linear(input_channel // 8 * 4 * 4, 2)
 
     def forward(self, x):
         z = self.extractor(x)
