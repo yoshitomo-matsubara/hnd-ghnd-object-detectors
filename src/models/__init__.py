@@ -16,7 +16,7 @@ def save_ckpt(model, optimizer, lr_scheduler, config, args, output_file_path):
                              output_file_path)
 
 
-def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None):
+def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None, strict=True):
     if not file_util.check_if_exists(ckpt_file_path):
         print('ckpt file is not found at `{}`'.format(ckpt_file_path))
         return None, None
@@ -24,7 +24,7 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None):
     ckpt = torch.load(ckpt_file_path, map_location='cpu')
     if model is not None:
         print('loading model parameters')
-        model.load_state_dict(ckpt['model'])
+        model.load_state_dict(ckpt['model'], strict=strict)
     if optimizer is not None:
         print('loading optimizer parameters')
         optimizer.load_state_dict(ckpt['optimizer'])
@@ -34,7 +34,7 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None):
     return ckpt['config'], ckpt['args']
 
 
-def get_model(model_config, device):
+def get_model(model_config, device, strict=True):
     model_name = model_config['name']
     ckpt_file_path = model_config['ckpt']
     model_params_config = model_config['params']
@@ -42,7 +42,7 @@ def get_model(model_config, device):
         model = rcnn.get_model(model_name, **model_params_config)
     else:
         raise ValueError('model_name `{}` is not expected'.format(model_name))
-    load_ckpt(ckpt_file_path, model=model)
+    load_ckpt(ckpt_file_path, model=model, strict=strict)
     return model.to(device)
 
 

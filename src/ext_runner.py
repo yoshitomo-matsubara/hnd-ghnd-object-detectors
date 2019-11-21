@@ -131,7 +131,7 @@ def main(args):
 
     print('Creating model')
     model_config = config['model']
-    model = get_model(model_config, device)
+    model = get_model(model_config, device, strict=False)
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)
 
