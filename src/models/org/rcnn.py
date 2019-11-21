@@ -18,7 +18,7 @@ from torchvision.ops import misc as misc_nn_ops
 
 from models.ext import get_ext_fpn_backbone
 from models.ext.backbone import ExtIntermediateLayerGetter
-
+from models import load_ckpt
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
     def __init__(self, min_size, max_size, image_mean, image_std):
@@ -402,16 +402,16 @@ def get_model_config(model_name):
 
 
 def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True, backbone_frozen=False,
-              progress=True, num_classes=91, custom_backbone=None, **kwargs):
+              progress=True, num_classes=91, custom_backbone=None, ext_config=None, strict=True, **kwargs):
     if pretrained:
         backbone_pretrained = False
 
     if custom_backbone is None:
-        if backbone_name.startswith('ext_'):
-            base_backbone = get_base_backbone(backbone_name[4:], backbone_pretrained)
+        base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
+        if ext_config is not None:
             backbone = get_ext_fpn_backbone(base_backbone, backbone_frozen)
+            load_ckpt(ext_config['ckpt'], backbone.body.ext_classifier)
         else:
-            base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
             backbone = get_fpn_backbone(base_backbone)
     else:
         backbone = custom_backbone
@@ -420,5 +420,5 @@ def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=Tr
     model = model_class(backbone, num_classes, **kwargs)
     if pretrained and backbone_name == 'resnet50':
         state_dict = load_state_dict_from_url(MODEL_URL_DICT[pretrained_key], progress=progress)
-        model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict, strict=strict)
     return model

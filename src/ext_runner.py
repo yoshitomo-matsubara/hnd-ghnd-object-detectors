@@ -139,7 +139,7 @@ def main(args):
         print('Start training')
         start_time = time.time()
         train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
-              config, args, model_config['ckpt'])
+              config, args, model_config['params']['ext_config']['ckpt'])
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))

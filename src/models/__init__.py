@@ -31,7 +31,7 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None, str
     if lr_scheduler is not None:
         print('loading scheduler parameters')
         lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
-    return ckpt['config'], ckpt['args']
+    return ckpt.get('config', None), ckpt.get('args', None)
 
 
 def get_model(model_config, device, strict=True):
@@ -39,7 +39,7 @@ def get_model(model_config, device, strict=True):
     ckpt_file_path = model_config['ckpt']
     model_params_config = model_config['params']
     if model_name in rcnn.MODEL_CLASS_DICT:
-        model = rcnn.get_model(model_name, **model_params_config)
+        model = rcnn.get_model(model_name, strict=strict, **model_params_config)
     else:
         raise ValueError('model_name `{}` is not expected'.format(model_name))
     load_ckpt(ckpt_file_path, model=model, strict=strict)
