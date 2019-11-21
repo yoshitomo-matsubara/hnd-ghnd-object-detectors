@@ -95,7 +95,7 @@ def evaluate(model, data_loader, device, split_name='Validation'):
     print('{} accuracy: {}'.format(split_name, accuracy))
     print('{} recall: {}'.format(split_name, recall))
     print('{} specificity: {}'.format(split_name, specificity))
-    return accuracy
+    return recall
 
 
 def train(model, train_sampler, train_data_loader, val_data_loader, device, distributed, config, args, ckpt_file_path):
@@ -108,7 +108,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     if file_util.check_if_exists(ckpt_file_path):
         load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
-    best_val_acc = 0.0
+    best_val_recall = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
     for epoch in range(1, num_epochs + 1):
@@ -119,9 +119,9 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         lr_scheduler.step()
 
         # evaluate after every epoch
-        val_acc = evaluate(model, val_data_loader, device, split_name='Validation')
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        val_recall = evaluate(model, val_data_loader, device, split_name='Validation')
+        if val_recall > best_val_recall:
+            best_val_recall = val_recall
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 
