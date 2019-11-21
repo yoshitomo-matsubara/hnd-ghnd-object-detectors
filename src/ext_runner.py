@@ -29,7 +29,7 @@ def get_argparser():
 
 def convert_target2ext_targets(targets, device):
     ext_targets = [1 if check_if_valid_target(target) else 0 for target in targets]
-    return torch.FloatTensor(ext_targets).to(device)
+    return torch.LongTensor(ext_targets).to(device)
 
 
 def train_model(model, optimizer, data_loader, device, epoch, log_freq):
