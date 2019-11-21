@@ -24,7 +24,8 @@ class Ext4ResNet(nn.Module):
 
     def forward(self, x):
         z = self.extractor(x)
-        return self.linear(z.flatten(1))
+        z = self.linear(z.flatten(1))
+        return z if self.training else z.softmax(dim=1)
 
 
 def get_ext_classifier(backbone):

@@ -76,15 +76,27 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
 
 def evaluate(model, data_loader, device, split_name='Validation'):
     correct_count = 0
+    pos_correct_count = 0
+    neg_correct_count = 0
+    pos_count = 0
     for images, targets in data_loader:
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         ext_logits = model(images, targets)
         ext_targets = convert_target2ext_targets(targets, ext_logits.device)
-        correct_count += ext_logits.argmax(1).eq(ext_targets).sum().item()
+        preds = ext_logits.argmax(dim=1)
+        correct_count += preds.eq(ext_targets).sum().item()
+        pos_correct_count += preds[ext_targets.nonzero().flatten()].sum().item()
+        neg_correct_count += ext_targets.shape[0] - preds[ext_targets.eq(0).nonzero().flatten()].sum().item()
+        pos_count += ext_targets.sum().item()
 
-    accuracy = correct_count / len(data_loader.dataset)
+    num_samples = len(data_loader.dataset)
+    accuracy = correct_count / num_samples
+    recall = pos_correct_count / pos_count
+    selectivity = neg_correct_count / (num_samples - pos_count)
     print('{} accuracy: {}'.format(split_name, accuracy))
+    print('{} recall: {}'.format(split_name, recall))
+    print('{} selectivity: {}'.format(split_name, selectivity))
     return accuracy
 
 
