@@ -101,8 +101,12 @@ class CustomRCNN(nn.Module):
                 ext_cls_loss = nn.functional.binary_cross_entropy_with_logits(ext_logits, ext_targets)
                 loss_dict.update({'ext_cls_loss': ext_cls_loss})
             elif features is None and ext_logits is None:
-                return [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
-                         'scores': torch.empty(0)}]
+                pred_dict = {'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
+                             'scores': torch.empty(0)}
+                if 'keypoints' in targets[0]:
+                    pred_dict['keypoints'] = torch.empty(0, 17, 3)
+                    pred_dict['keypoints_scores'] = torch.empty(0, 17)
+                return [pred_dict]
 
         if isinstance(features, torch.Tensor):
             features = OrderedDict([(0, features)])
