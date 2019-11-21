@@ -15,7 +15,7 @@ class Ext4ResNet(nn.Module):
             nn.BatchNorm2d(input_channel // 4),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((16, 16)),
-            nn.Conv2d(input_channel, input_channel // 8, kernel_size=4, stride=2),
+            nn.Conv2d(input_channel // 4, input_channel // 8, kernel_size=4, stride=2),
             nn.BatchNorm2d(input_channel // 8),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((4, 4))
