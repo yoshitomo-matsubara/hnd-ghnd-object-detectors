@@ -63,6 +63,9 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
         out = OrderedDict()
         z = None
         for name, module in self.items():
+            if 'ext_classifier' in name:
+                continue
+
             x = module(x)
             if name in self.return_layers:
                 out_name = self.return_layers[name]
