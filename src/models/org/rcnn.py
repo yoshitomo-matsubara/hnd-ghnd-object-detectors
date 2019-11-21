@@ -16,7 +16,7 @@ from torchvision.models.utils import load_state_dict_from_url
 from torchvision.ops import MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
 
-from models.custom.ext_backbone import ExtIntermediateLayerGetter, check_if_valid_target
+from models.custom.ext_backbone import ExtIntermediateLayerGetter, ExtBackboneWithFPN, check_if_valid_target
 
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
@@ -393,20 +393,43 @@ def get_fpn_backbone(backbone):
     return BackboneWithFPN(backbone, return_layers, in_channels_list, out_channels)
 
 
+def get_ext_fpn_backbone(backbone, backbone_frozen=False):
+    # freeze layers
+    for name, parameter in backbone.named_parameters():
+        if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+            parameter.requires_grad_(False)
+
+    return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
+
+    in_channels_stage2 = backbone.inplanes // 8
+    in_channels_list = [
+        in_channels_stage2,
+        in_channels_stage2 * 2,
+        in_channels_stage2 * 4,
+        in_channels_stage2 * 8,
+    ]
+    out_channels = 256
+    return ExtBackboneWithFPN(backbone, return_layers, in_channels_list, out_channels, backbone_frozen)
+
+
 def get_model_config(model_name):
     if model_name in MODEL_CLASS_DICT:
         return MODEL_CLASS_DICT[model_name]
     raise KeyError('model_name `{}` is not expected'.format(model_name))
 
 
-def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
+def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True, backbone_frozen=False,
               progress=True, num_classes=91, custom_backbone=None, **kwargs):
     if pretrained:
         backbone_pretrained = False
 
     if custom_backbone is None:
-        base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
-        backbone = get_fpn_backbone(base_backbone)
+        if backbone_name.startswith('ext_'):
+            base_backbone = get_base_backbone(backbone_name[4:], backbone_pretrained)
+            backbone = get_ext_fpn_backbone(base_backbone, backbone_frozen)
+        else:
+            base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
+            backbone = get_fpn_backbone(base_backbone)
     else:
         backbone = custom_backbone
 
