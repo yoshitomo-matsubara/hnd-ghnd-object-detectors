@@ -96,7 +96,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
     if file_util.check_if_exists(ckpt_file_path):
-        load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
+        load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
     best_val_acc = 0.0
     num_epochs = train_config['num_epochs']

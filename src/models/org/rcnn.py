@@ -18,7 +18,7 @@ from torchvision.ops import misc as misc_nn_ops
 
 from models.ext import get_ext_fpn_backbone
 from models.ext.backbone import ExtIntermediateLayerGetter
-from models import load_ckpt
+
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
     def __init__(self, min_size, max_size, image_mean, image_std):
@@ -410,7 +410,6 @@ def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=Tr
         base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
         if ext_config is not None:
             backbone = get_ext_fpn_backbone(base_backbone, backbone_frozen)
-            load_ckpt(ext_config['ckpt'], backbone.body.ext_classifier)
         else:
             backbone = get_fpn_backbone(base_backbone)
     else:
