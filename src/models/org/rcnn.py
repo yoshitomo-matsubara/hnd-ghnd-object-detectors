@@ -97,7 +97,8 @@ class CustomRCNN(nn.Module):
         if isinstance(self.backbone.body, ExtIntermediateLayerGetter):
             features, ext_logits = features
             if self.training:
-                ext_targets = torch.FloatTensor([1 if check_if_valid_target(target) else 0 for target in targets])
+                ext_targets = [1 if check_if_valid_target(target) else 0 for target in targets]
+                ext_targets = torch.FloatTensor(ext_targets).unsqueeze(1).to(ext_logits.device)
                 ext_cls_loss = nn.functional.binary_cross_entropy_with_logits(ext_logits, ext_targets)
                 loss_dict.update({'ext_cls_loss': ext_cls_loss})
             elif features is None and ext_logits is None:
