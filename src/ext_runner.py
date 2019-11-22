@@ -37,7 +37,6 @@ def convert_target2ext_targets(targets, device):
 
 def train_model(model, optimizer, data_loader, device, epoch, log_freq):
     model.train()
-    model.ext_training = True
     metric_logger = misc_util.MetricLogger(delimiter='  ')
     metric_logger.add_meter('lr', misc_util.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
@@ -153,6 +152,7 @@ def main(args):
     print('Creating model')
     model_config = config['model']
     model = get_model(model_config, device, strict=False)
+    model.ext_training = True
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)
 
