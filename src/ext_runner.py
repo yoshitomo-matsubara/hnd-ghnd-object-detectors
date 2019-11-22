@@ -4,8 +4,11 @@ import math
 import sys
 import time
 
+import numpy as np
+import pandas as pd
 import torch
 import torch.utils.data
+from sklearn import metrics
 from torch import nn
 
 from models import get_model, load_ckpt, save_ckpt
@@ -49,7 +52,6 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         ext_logits = model(images, targets)
         ext_targets = convert_target2ext_targets(targets, ext_logits.device)
-
         ext_cls_loss = nn.functional.cross_entropy(ext_logits, ext_targets)
         loss_dict = {'loss_ext_classifier': ext_cls_loss}
         losses = sum(loss for loss in loss_dict.values())
@@ -78,11 +80,15 @@ def evaluate(model, data_loader, device, split_name='Validation'):
     correct_count = 0
     pos_correct_count = 0
     pos_count = 0
+    prob_list = list()
+    label_list = list()
     for images, targets in data_loader:
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         ext_logits = model(images, targets)
         ext_targets = convert_target2ext_targets(targets, ext_logits.device)
+        prob_list.append(ext_logits[:, 1].numpy())
+        label_list.append(ext_targets.numpy())
         preds = ext_logits.argmax(dim=1)
         correct_count += preds.eq(ext_targets).sum().item()
         pos_correct_count += preds[ext_targets.nonzero().flatten()].sum().item()
@@ -92,9 +98,13 @@ def evaluate(model, data_loader, device, split_name='Validation'):
     accuracy = correct_count / num_samples
     recall = pos_correct_count / pos_count
     specificity = (correct_count - pos_correct_count) / (num_samples - pos_count)
-    print('{} accuracy: {}'.format(split_name, accuracy))
-    print('{} recall: {}'.format(split_name, recall))
-    print('{} specificity: {}'.format(split_name, specificity))
+    print('{} accuracy: {:.4f} ({} / {})'.format(split_name, accuracy, correct_count, num_samples))
+    print('{} recall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
+    print('{} specificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
+                                                    num_samples - pos_count))
+    fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
+    data_frame = pd.DataFrame(np.array(thrs, tprs, fprs), columns=['Threshold', 'TPR (Recall)', 'FPR'])
+    print(data_frame)
     return recall
 
 

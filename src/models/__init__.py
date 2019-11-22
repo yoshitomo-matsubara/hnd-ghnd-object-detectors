@@ -42,6 +42,12 @@ def get_model(model_config, device, strict=True):
         model = rcnn.get_model(model_name, strict=strict, **model_params_config)
     else:
         raise ValueError('model_name `{}` is not expected'.format(model_name))
+
+    if 'ext_config' in model_params_config:
+        strict = False
+        ext_config = model_params_config['ext_config']
+        load_ckpt(ext_config['ckpt'], model=model.backbone.body.ext_classifier)
+
     load_ckpt(ckpt_file_path, model=model, strict=strict)
     return model.to(device)
 

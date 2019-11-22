@@ -4,9 +4,18 @@ from torchvision.models.resnet import ResNet
 from models.custom.resnet import CustomResNet
 
 
-class Ext4ResNet(nn.Module):
-    def __init__(self, resnet):
+class BaseExtClassifier(nn.Module):
+    def __init__(self, ext_idx):
         super().__init__()
+        self.ext_idx = ext_idx
+
+    def forward(self, *args):
+        raise NotImplementedError('forward function is not implemented')
+
+
+class Ext4ResNet(BaseExtClassifier):
+    def __init__(self, resnet):
+        super().__init__(ext_idx=1)
         # inplanes = 512 for ResNets-18 and -34, and 2048 for all the other ResNets
         input_channel = resnet.inplanes // 8
         self.extractor = nn.Sequential(

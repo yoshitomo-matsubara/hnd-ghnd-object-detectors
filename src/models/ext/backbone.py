@@ -41,9 +41,10 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
         "return_layers": Dict[str, str],
     }
 
-    def __init__(self, model, return_layers, ext_idx):
+    def __init__(self, model, return_layers, ext_config):
         if not set(return_layers).issubset([name for name, _ in model.named_children()]):
             raise ValueError("return_layers are not present in model")
+
         orig_return_layers = return_layers
         return_layers = {k: v for k, v in return_layers.items()}
         layers = OrderedDict()
@@ -56,8 +57,9 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
 
         super().__init__(layers)
         self.return_layers = orig_return_layers
-        self.ext_layer_name = list(self.return_layers.keys())[ext_idx]
+        self.ext_layer_name = list(self.return_layers.keys())[model.ext_idx]
         self.ext_classifier = get_ext_classifier(model)
+        self.threshold = ext_config['threshold']
 
     def forward(self, x):
         out = OrderedDict()
@@ -72,7 +74,7 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
                 out[out_name] = x
                 if name == self.ext_layer_name:
                     z = self.ext_classifier(x)
-                    if not self.training and len(z) == 1 and z[0].argmax() == 0:
+                    if not self.training and z.shape[0] == 1 and z[0] < self.threshold:
                         return None, None
                     elif self.training:
                         return out, z
@@ -80,12 +82,12 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
 
 
 class ExtBackboneWithFPN(nn.Module):
-    def __init__(self, backbone, return_layers, in_channels_list, out_channels, ext_idx, backbone_frozen=False):
+    def __init__(self, backbone, return_layers, in_channels_list, out_channels, ext_config):
         super().__init__()
-        if backbone_frozen:
+        if ext_config.get('backbone_frozen', False):
             module_util.freeze_module_params(backbone)
 
-        self.body = ExtIntermediateLayerGetter(backbone, return_layers=return_layers, ext_idx=ext_idx)
+        self.body = ExtIntermediateLayerGetter(backbone, return_layers=return_layers, ext_config=ext_config)
         self.fpn = FeaturePyramidNetwork(
             in_channels_list=in_channels_list,
             out_channels=out_channels,
