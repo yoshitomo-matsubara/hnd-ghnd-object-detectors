@@ -57,8 +57,8 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
 
         super().__init__(layers)
         self.return_layers = orig_return_layers
-        self.ext_layer_name = list(self.return_layers.keys())[model.ext_idx]
         self.ext_classifier = get_ext_classifier(model)
+        self.ext_layer_name = list(self.return_layers.keys())[self.ext_classifier.ext_idx]
         self.threshold = ext_config['threshold']
 
     def forward(self, x):
