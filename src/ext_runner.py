@@ -23,6 +23,7 @@ def get_argparser():
     argparser.add_argument('--config', required=True, help='yaml config file')
     argparser.add_argument('--device', default='cuda', help='device')
     argparser.add_argument('--json', help='dictionary to overwrite config')
+    argparser.add_argument('--min_recall', type=float, default=0.9, help='minimum recall to decide a threshold')
     argparser.add_argument('-train', action='store_true', help='train a model')
     # distributed training parameters
     argparser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
@@ -75,7 +76,7 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
         metric_logger.update(lr=optimizer.param_groups[0]['lr'])
 
 
-def evaluate(model, data_loader, device, split_name='Validation'):
+def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     model.eval()
     correct_count = 0
     pos_correct_count = 0
@@ -104,8 +105,16 @@ def evaluate(model, data_loader, device, split_name='Validation'):
     print('{} specificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
                                                     num_samples - pos_count))
     fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
-    data_frame = pd.DataFrame(np.array([thrs, tprs, fprs]), columns=['Threshold', 'TPR (Recall)', 'FPR'])
-    print(data_frame)
+    idx = -1
+    for i, tpr in enumerate(tprs):
+        if tpr >= min_recall:
+            idx = i
+            break
+
+    data_frame =\
+        pd.DataFrame(np.array([thrs[idx:], tprs[idx:], fprs[idx:]]).T, columns=['Threshold', 'TPR (Recall)', 'FPR'])
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(data_frame)
     return recall
 
 
@@ -130,7 +139,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         lr_scheduler.step()
 
         # evaluate after every epoch
-        val_recall = evaluate(model, val_data_loader, device, split_name='Validation')
+        val_recall = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
         if val_recall > best_val_recall:
             best_val_recall = val_recall
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
@@ -165,7 +174,7 @@ def main(args):
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
-    evaluate(model, test_data_loader, device=device, split_name='Test')
+    evaluate(model, test_data_loader, device=device, min_recall=args.min_recall, split_name='Test')
 
 
 if __name__ == '__main__':
