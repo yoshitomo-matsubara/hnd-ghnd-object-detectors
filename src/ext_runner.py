@@ -82,17 +82,18 @@ def evaluate(model, data_loader, device, split_name='Validation'):
     pos_count = 0
     prob_list = list()
     label_list = list()
-    for images, targets in data_loader:
-        images = list(image.to(device) for image in images)
-        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-        ext_logits = model(images, targets)
-        ext_targets = convert_target2ext_targets(targets, device)
-        prob_list.append(ext_logits[:, 1].numpy())
-        label_list.append(ext_targets.numpy())
-        preds = ext_logits.argmax(dim=1)
-        correct_count += preds.eq(ext_targets).sum().item()
-        pos_correct_count += preds[ext_targets.nonzero().flatten()].sum().item()
-        pos_count += ext_targets.sum().item()
+    with torch.no_grad():
+        for images, targets in data_loader:
+            images = list(image.to(device) for image in images)
+            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+            ext_logits = model(images, targets)
+            ext_targets = convert_target2ext_targets(targets, device)
+            prob_list.append(ext_logits[:, 1].cpu().numpy())
+            label_list.append(ext_targets.cpu().numpy())
+            preds = ext_logits.argmax(dim=1)
+            correct_count += preds.eq(ext_targets).sum().item()
+            pos_correct_count += preds[ext_targets.nonzero().flatten()].sum().item()
+            pos_count += ext_targets.sum().item()
 
     num_samples = len(data_loader.dataset)
     accuracy = correct_count / num_samples
