@@ -100,7 +100,7 @@ class CustomRCNN(nn.Module):
             features, ext_logits = features
             if self.ext_training:
                 return ext_logits
-            elif not self.training and features is None and ext_logits is None:
+            elif not self.training and features is None:
                 pred_dict = {'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
                              'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
                              'keypoints_scores': torch.empty(0, 17)}
