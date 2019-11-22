@@ -50,7 +50,7 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         ext_logits = model(images, targets)
-        ext_targets = convert_target2ext_targets(targets, ext_logits.device)
+        ext_targets = convert_target2ext_targets(targets, device)
         ext_cls_loss = nn.functional.cross_entropy(ext_logits, ext_targets)
         loss_dict = {'loss_ext_classifier': ext_cls_loss}
         losses = sum(loss for loss in loss_dict.values())
@@ -86,7 +86,7 @@ def evaluate(model, data_loader, device, split_name='Validation'):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         ext_logits = model(images, targets)
-        ext_targets = convert_target2ext_targets(targets, ext_logits.device)
+        ext_targets = convert_target2ext_targets(targets, device)
         prob_list.append(ext_logits[:, 1].numpy())
         label_list.append(ext_targets.numpy())
         preds = ext_logits.argmax(dim=1)
