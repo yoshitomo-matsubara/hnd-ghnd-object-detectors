@@ -410,6 +410,7 @@ def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=Tr
         base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
         if ext_config is not None:
             backbone = get_ext_fpn_backbone(base_backbone, ext_config)
+            strict = False
         else:
             backbone = get_fpn_backbone(base_backbone)
     else:
