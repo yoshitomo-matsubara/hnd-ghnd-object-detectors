@@ -104,17 +104,18 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     print('{} recall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
     print('{} specificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
                                                     num_samples - pos_count))
-    fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
-    idx = -1
-    for i, tpr in enumerate(tprs):
-        if tpr >= min_recall:
-            idx = i
-            break
+    if split_name == 'Test':
+        fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
+        idx = 0
+        for i, tpr in enumerate(tprs):
+            if tpr >= min_recall:
+                idx = i
+                break
 
-    data_frame =\
-        pd.DataFrame(np.array([thrs[idx:], tprs[idx:], fprs[idx:]]).T, columns=['Threshold', 'TPR (Recall)', 'FPR'])
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-        print(data_frame)
+        data_frame =\
+            pd.DataFrame(np.array([thrs[idx:], tprs[idx:], fprs[idx:]]).T, columns=['Threshold', 'TPR (Recall)', 'FPR'])
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print(data_frame)
     return recall
 
 
@@ -169,11 +170,13 @@ def main(args):
     if args.train:
         print('Start training')
         start_time = time.time()
+        ckpt_file_path = model_config['params']['ext_config']['ckpt']
         train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
-              config, args, model_config['params']['ext_config']['ckpt'])
+              config, args, ckpt_file_path)
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
+        load_ckpt(ckpt_file_path, model=model.backbone.body.ext_classifier)
     evaluate(model, test_data_loader, device=device, min_recall=args.min_recall, split_name='Test')
 
 
