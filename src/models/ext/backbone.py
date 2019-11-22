@@ -75,7 +75,7 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
                 if name == self.ext_layer_name:
                     z = self.ext_classifier(x)
                     if not self.training and z.shape[0] == 1 and z[0][1] < self.threshold:
-                        return None, None
+                        return None, z
                     elif self.training:
                         return out, z
         return out, z
@@ -97,8 +97,8 @@ class ExtBackboneWithFPN(nn.Module):
 
     def forward(self, x):
         z, ext_z = self.body(x)
-        if not self.training and z is None and ext_z is None:
-            return None, None
+        if not self.training and z is None:
+            return None, ext_z
         elif self.training:
             return z, ext_z
         return self.fpn(z), ext_z
