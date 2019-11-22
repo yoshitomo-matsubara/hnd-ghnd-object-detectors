@@ -401,7 +401,7 @@ def get_model_config(model_name):
     raise KeyError('model_name `{}` is not expected'.format(model_name))
 
 
-def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True, backbone_frozen=False,
+def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
               progress=True, num_classes=91, custom_backbone=None, ext_config=None, strict=True, **kwargs):
     if pretrained:
         backbone_pretrained = False
@@ -409,7 +409,7 @@ def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=Tr
     if custom_backbone is None:
         base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
         if ext_config is not None:
-            backbone = get_ext_fpn_backbone(base_backbone, backbone_frozen)
+            backbone = get_ext_fpn_backbone(base_backbone, ext_config)
         else:
             backbone = get_fpn_backbone(base_backbone)
     else:
