@@ -104,7 +104,7 @@ def evaluate(model, data_loader, device, split_name='Validation'):
     print('{} specificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
                                                     num_samples - pos_count))
     fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
-    data_frame = pd.DataFrame(np.array(thrs, tprs, fprs), columns=['Threshold', 'TPR (Recall)', 'FPR'])
+    data_frame = pd.DataFrame(np.array([thrs, tprs, fprs]), columns=['Threshold', 'TPR (Recall)', 'FPR'])
     print(data_frame)
     return recall
 
