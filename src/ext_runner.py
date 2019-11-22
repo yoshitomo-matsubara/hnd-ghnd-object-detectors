@@ -77,6 +77,7 @@ def train_model(model, optimizer, data_loader, device, epoch, log_freq):
 
 
 def evaluate(model, data_loader, device, split_name='Validation'):
+    model.eval()
     correct_count = 0
     pos_correct_count = 0
     pos_count = 0
