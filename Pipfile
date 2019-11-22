@@ -11,6 +11,8 @@ matplotlib = "*"
 pyyaml = "*"
 pycocotools = "*"
 cython = "*"
+scikit-learn = "*"
+pandas = "*"
 
 [dev-packages]
 
