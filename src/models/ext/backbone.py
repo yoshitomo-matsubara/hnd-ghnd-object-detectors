@@ -74,7 +74,7 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
                 out[out_name] = x
                 if name == self.ext_layer_name:
                     z = self.ext_classifier(x)
-                    if not self.training and z.shape[0] == 1 and z[0] < self.threshold:
+                    if not self.training and z.shape[0] == 1 and z[0][1] < self.threshold:
                         return None, None
                     elif self.training:
                         return out, z
