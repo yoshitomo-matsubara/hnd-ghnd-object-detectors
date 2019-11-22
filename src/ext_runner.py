@@ -106,11 +106,7 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
                                                     num_samples - pos_count))
     if split_name == 'Test':
         fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
-        idx = 0
-        for i, tpr in enumerate(tprs):
-            if tpr >= min_recall:
-                idx = i
-                break
+        idx = np.searchsorted(tprs, min_recall)
 
         data_frame =\
             pd.DataFrame(np.array([thrs[idx:], tprs[idx:], fprs[idx:]]).T, columns=['Threshold', 'TPR (Recall)', 'FPR'])
