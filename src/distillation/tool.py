@@ -1,6 +1,9 @@
+import random
+
 from torch import nn
 
 from distillation.loss import get_loss
+from models.org.rcnn import KeypointRCNN
 from myutils.pytorch import module_util
 
 
@@ -27,10 +30,17 @@ class DistillationBox(nn.Module):
             student_module.register_forward_hook(extract_output)
 
         self.criterion = get_loss(criterion_config)
+        self.require_adjustment = isinstance(self.student_model, KeypointRCNN)
 
     def forward(self, images, targets):
-        self.teacher_model(images)
-        org_loss_dict = self.student_model(images, targets)
+        if self.require_adjustment:
+            fixed_sizes = [random.choice(self.teacher_model.transform.min_size) for _ in images]
+            self.teacher_model(images, fixed_sizes=fixed_sizes)
+            org_loss_dict = self.student_model(images, targets, fixed_sizes=fixed_sizes)
+        else:
+            self.teacher_model(images)
+            org_loss_dict = self.student_model(images, targets)
+
         output_dict = dict()
         for teacher_path, student_path in self.target_module_pairs:
             teacher_dict = module_util.get_module(self.teacher_model, teacher_path).__dict__['distillation_box']

@@ -1,22 +1,29 @@
 dataset:
     name: &dataset_name 'coco2017'
-    task_name: 'coco_bbox'
+    task_name: 'coco_kp'
     root: !join ['./resource/dataset/', *dataset_name, '/']
     num_workers: 4
     aspect_ratio_group_factor: 0
     splits:
-        train: 'train'
-        val: 'val'
-        test: 'val'
+        train:
+            name: 'train'
+            remove_non_annotated_imgs: True
+        val:
+            name: 'val'
+            remove_non_annotated_imgs: False
+        test:
+            name: 'val'
+            remove_non_annotated_imgs: False
 
 input_shape: [3, 300, 400]
 
 model:
-    name: &model_name 'faster_rcnn'
+    name: &model_name 'keypoint_rcnn'
     params:
         backbone_name: &backbone_name 'resnet50'
         backbone_pretrained: True
-        num_classes: 91
+        num_classes: 2
+        num_keypoints: 17
         pretrained: True
     experiment: &experiment !join [*dataset_name, '-', *model_name, '-backbone_', *backbone_name]
     ckpt: !join ['./resource/ckpt/org/', *experiment, '.pt']

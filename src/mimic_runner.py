@@ -35,7 +35,6 @@ def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_fr
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
         loss = distillation_box(images, targets)
-        loss = loss.item()
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -88,7 +87,7 @@ def main(args):
     if args.json is not None:
         main_util.overwrite_config(config, args.json)
 
-    distributed, device_ids = main_util.init_distributed_mode(args.world_size, args.dist_url)
+    distributed, _ = main_util.init_distributed_mode(args.world_size, args.dist_url)
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     teacher_model = get_model(config['teacher_model'], device)
     student_model = get_model(config['student_model'], device)

@@ -101,32 +101,33 @@ class ConvertCocoPolysToMask(object):
         return image, target
 
 
-def _coco_remove_images_without_annotations(dataset, cat_list=None):
-    def _has_only_empty_bbox(anno):
-        return all(any(o <= 1 for o in obj['bbox'][2:]) for obj in anno)
+def has_only_empty_bbox(anno):
+    return all(any(o <= 1 for o in obj['bbox'][2:]) for obj in anno)
 
-    def _count_visible_keypoints(anno):
-        return sum(sum(1 for v in ann['keypoints'][2::3] if v > 0) for ann in anno)
 
-    min_keypoints_per_image = 10
+def count_visible_keypoints(anno):
+    return sum(sum(1 for v in ann['keypoints'][2::3] if v > 0) for ann in anno)
 
-    def _has_valid_annotation(anno):
-        # if it's empty, there is no annotation
-        if len(anno) == 0:
-            return False
-        # if all boxes have close to zero area, there is no annotation
-        if _has_only_empty_bbox(anno):
-            return False
-        # keypoints task have a slight different critera for considering
-        # if an annotation is valid
-        if 'keypoints' not in anno[0]:
-            return True
-        # for keypoint detection tasks, only consider valid images those
-        # containing at least min_keypoints_per_image
-        if _count_visible_keypoints(anno) >= min_keypoints_per_image:
-            return True
+
+def has_valid_annotation(anno, min_keypoints_per_image=10):
+    # if it's empty, there is no annotation
+    if len(anno) == 0:
         return False
+    # if all boxes have close to zero area, there is no annotation
+    if has_only_empty_bbox(anno):
+        return False
+    # keypoints task have a slight different criteria for considering
+    # if an annotation is valid
+    if 'keypoints' not in anno[0]:
+        return True
+    # for keypoint detection tasks, only consider valid images those
+    # containing at least min_keypoints_per_image
+    if count_visible_keypoints(anno) >= min_keypoints_per_image:
+        return True
+    return False
 
+
+def remove_images_without_annotations(dataset, cat_list=None):
     assert isinstance(dataset, torchvision.datasets.CocoDetection)
     ids = []
     for ds_idx, img_id in enumerate(dataset.ids):
@@ -134,7 +135,7 @@ def _coco_remove_images_without_annotations(dataset, cat_list=None):
         anno = dataset.coco.loadAnns(ann_ids)
         if cat_list:
             anno = [obj for obj in anno if obj['category_id'] in cat_list]
-        if _has_valid_annotation(anno):
+        if has_valid_annotation(anno):
             ids.append(ds_idx)
 
     dataset = torch.utils.data.Subset(dataset, ids)
@@ -143,7 +144,8 @@ def _coco_remove_images_without_annotations(dataset, cat_list=None):
 
 def convert_to_coco_api(ds):
     coco_ds = COCO()
-    ann_id = 0
+    # annotation IDs need to start at 1, not 0, see torchvision issue #1530
+    ann_id = 1
     dataset = {'images': [], 'categories': [], 'annotations': []}
     categories = set()
     for img_idx in range(len(ds)):
@@ -217,7 +219,7 @@ class CocoDetection(torchvision.datasets.CocoDetection):
         return img, target
 
 
-def get_coco(root_dir_path, split_name, transforms, mode='instances', year=2017):
+def get_coco(root_dir_path, split_name, transforms, mode, remove_non_annotated_imgs):
     anno_file_template = '{}_{}2017.json'
     PATHS = {
         'train': ('train2017', os.path.join('annotations', anno_file_template.format(mode, 'train'))),
@@ -234,10 +236,6 @@ def get_coco(root_dir_path, split_name, transforms, mode='instances', year=2017)
     ann_file = os.path.join(root_dir_path, ann_file)
     dataset = CocoDetection(img_folder, ann_file, transforms=transforms)
 
-    if split_name == 'train':
-        dataset = _coco_remove_images_without_annotations(dataset)
+    if remove_non_annotated_imgs:
+        dataset = remove_images_without_annotations(dataset)
     return dataset
-
-
-def get_coco_kp(root_dir_path, split_name, transforms):
-    return get_coco(root_dir_path, split_name, transforms, mode='person_keypoints')
