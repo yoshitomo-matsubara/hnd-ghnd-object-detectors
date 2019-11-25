@@ -360,7 +360,7 @@ MODEL_URL_DICT = {
     'maskrcnn_resnet50_fpn_coco':
         'https://download.pytorch.org/models/maskrcnn_resnet50_fpn_coco-bf2d0c1e.pth',
     'keypointrcnn_resnet50_fpn_coco':
-        'https://download.pytorch.org/models/keypointrcnn_resnet50_fpn_coco-9f466800.pth'
+        'https://download.pytorch.org/models/keypointrcnn_resnet50_fpn_coco-fc266e95.pth'
 }
 
 MODEL_CLASS_DICT = {
