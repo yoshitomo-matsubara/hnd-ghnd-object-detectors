@@ -3,7 +3,7 @@ dataset:
     task_name: 'coco_kp'
     root: !join ['/home/yoshitom/dataset/', *dataset_name, '/']
     num_workers: 4
-    aspect_ratio_group_factor: 0
+    aspect_ratio_group_factor: 3
     splits:
         train:
             name: 'train'
@@ -14,8 +14,6 @@ dataset:
         test:
             name: 'val'
             remove_non_annotated_imgs: False
-
-input_shape: [3, 300, 400]
 
 model:
     name: &model_name 'keypoint_rcnn'
@@ -33,7 +31,7 @@ model:
     ckpt: !join ['./resource/ckpt/org/', *experiment, '.pt']
 
 train:
-    num_epochs: 13
+    num_epochs: 26
     batch_size: 2
     log_freq: 10000
     optimizer:
@@ -45,7 +43,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [8, 11]
+            milestones: [16, 22]
             gamma: 0.1
 
 test:
