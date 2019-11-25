@@ -28,13 +28,29 @@ class CustomResNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0]) if layer1 is None else layer1
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0])\
-            if layer2 is None else layer2
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1])\
-            if layer3 is None else layer3
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2])\
-            if layer4 is None else layer4
+        if layer1 is None:
+            self.layer1 = self._make_layer(block, 64, layers[0])
+        else:
+            self.layer1 = layer1
+            self.inplanes = 64 * block.expansion
+
+        if layer2 is None:
+            self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0])
+        else:
+            self.layer2 = layer2
+            self.inplanes = 128 * block.expansion
+
+        if layer3 is None:
+            self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1])
+        else:
+            self.layer3 = layer3
+            self.inplanes = 256 * block.expansion
+
+        if layer4 is None:
+            self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2])
+        else:
+            self.layer4 = layer4
+            self.inplanes = 512 * block.expansion
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
