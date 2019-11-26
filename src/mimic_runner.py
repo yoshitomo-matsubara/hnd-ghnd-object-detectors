@@ -4,9 +4,8 @@ import torch
 
 from distillation.tool import DistillationBox
 from models import load_ckpt, get_model, save_ckpt
-from myutils.common import file_util
-from myutils.common import yaml_util
-from myutils.pytorch import func_util
+from myutils.common import file_util, yaml_util
+from myutils.pytorch import func_util, module_util
 from utils import data_util, main_util, misc_util
 
 
@@ -20,6 +19,12 @@ def get_argparser():
     argparser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
     argparser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     return argparser
+
+
+def freeze_modules(student_model, student_model_config):
+    for student_path in student_model_config['frozen_modules']:
+        student_module = module_util.get_module(student_model, student_path)
+        module_util.freeze_module_params(student_module)
 
 
 def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_freq, device, epoch):
@@ -46,7 +51,7 @@ def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_fr
 
 
 def distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
-            device, distributed, config, args):
+            device, distributed, distill_backbone_only, config, args):
     train_config = config['train']
     distillation_box = DistillationBox(teacher_model, student_model, train_config['criterion'])
     ckpt_file_path = config['student_model']['ckpt']
@@ -66,6 +71,8 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
 
         teacher_model.eval()
         student_model.train()
+        teacher_model.distill_backbone_only = distill_backbone_only
+        student_model.distill_backbone_only = distill_backbone_only
         distill_model(distillation_box, train_data_loader, optimizer, lr_scheduler, log_freq, device, epoch)
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
@@ -76,6 +83,8 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
 
 
 def evaluate(teacher_model, student_model, test_data_loader, device):
+    teacher_model.distill_backbone_only = False
+    student_model.distill_backbone_only = False
     print('[Teacher model]')
     main_util.evaluate(teacher_model, test_data_loader, device=device)
     print('\n[Student model]')
@@ -90,13 +99,16 @@ def main(args):
     distributed, _ = main_util.init_distributed_mode(args.world_size, args.dist_url)
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     teacher_model = get_model(config['teacher_model'], device)
-    student_model = get_model(config['student_model'], device)
+    student_model_config = config['student_model']
+    student_model = get_model(student_model_config, device)
+    freeze_modules(student_model, student_model_config)
+    distill_backbone_only = student_model_config['distill_backbone_only']
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader = \
         data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
     if args.distill:
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
-                device, distributed, config, args)
+                device, distributed, distill_backbone_only, config, args)
     evaluate(teacher_model, student_model, test_data_loader, device)
 
 

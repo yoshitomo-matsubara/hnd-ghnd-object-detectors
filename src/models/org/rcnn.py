@@ -90,6 +90,7 @@ class CustomRCNN(nn.Module):
         self.rpn = rpn
         self.roi_heads = roi_heads
         self.ext_training = False
+        self.distill_backbone_only = False
 
     def forward(self, images, targets=None, fixed_sizes=None):
         if self.training and targets is None:
@@ -97,6 +98,9 @@ class CustomRCNN(nn.Module):
         original_image_sizes = [img.shape[-2:] for img in images]
         images, targets = self.transform(images, targets, fixed_sizes)
         features = self.backbone(images.tensors)
+        if self.distill_backbone_only:
+            return features
+
         loss_dict = dict()
         if isinstance(self.backbone.body, ExtIntermediateLayerGetter):
             features, ext_logits = features
