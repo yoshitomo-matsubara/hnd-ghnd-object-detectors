@@ -31,3 +31,11 @@ class Bottleneck4ResNet50(nn.Module):
     def forward(self, x):
         z = self.encoder(x)
         return self.decoder(z)
+
+
+def get_mimic_layers(backbone_name, backbone_params_config):
+    layer1, layer2, layer3, layer4 = None, None, None, None
+    if backbone_params_config['layer1'] is None and backbone_name == 'custom_resnet50':
+        layer1 = Bottleneck4ResNet50()
+    return layer1, layer2, layer3, layer4
+

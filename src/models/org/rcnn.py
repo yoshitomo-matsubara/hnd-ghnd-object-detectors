@@ -16,8 +16,10 @@ from torchvision.models.utils import load_state_dict_from_url
 from torchvision.ops import MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
 
+from models import custom
 from models.ext import get_ext_fpn_backbone
 from models.ext.backbone import ExtIntermediateLayerGetter
+from models.mimic.resnet_layer import get_mimic_layers
 
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
@@ -370,9 +372,14 @@ MODEL_CLASS_DICT = {
 }
 
 
-def get_base_backbone(backbone_name, pretrained):
+def get_base_backbone(backbone_name, backbone_params_config):
+    pretrained = backbone_params_config['pretrained']
     if backbone_name.startswith('resnet'):
         return resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
+    elif backbone_name.startswith('custom_resnet'):
+        layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_params_config)
+        return custom.resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d,
+                                                     layer1=layer1, layer2=layer2, layer3=layer3, layer4=layer4)
     raise ValueError('backbone_name `{}` is not expected'.format(backbone_name))
 
 
@@ -405,13 +412,12 @@ def get_model(model_name, pretrained, backbone_config=None,
               progress=True, num_classes=91, custom_backbone=None, strict=True, **kwargs):
     backbone_name = backbone_config['name']
     backbone_params_config = backbone_config['params']
-    backbone_pretrained = backbone_params_config['pretrained']
     if pretrained:
-        backbone_pretrained = False
+        backbone_params_config['pretrained'] = False
 
     if custom_backbone is None:
+        base_backbone = get_base_backbone(backbone_name, backbone_params_config)
         ext_config = backbone_config.get('ext_config', None)
-        base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
         if ext_config is not None:
             backbone = get_ext_fpn_backbone(base_backbone, ext_config)
             strict = False
