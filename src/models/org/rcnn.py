@@ -401,12 +401,16 @@ def get_model_config(model_name):
     raise KeyError('model_name `{}` is not expected'.format(model_name))
 
 
-def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
-              progress=True, num_classes=91, custom_backbone=None, ext_config=None, strict=True, **kwargs):
+def get_model(model_name, pretrained, backbone_config=None,
+              progress=True, num_classes=91, custom_backbone=None, strict=True, **kwargs):
+    backbone_name = backbone_config['name']
+    backbone_params_config = backbone_config['params']
+    backbone_pretrained = backbone_params_config['pretrained']
     if pretrained:
         backbone_pretrained = False
 
     if custom_backbone is None:
+        ext_config = backbone_config.get('ext_config', None)
         base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
         if ext_config is not None:
             backbone = get_ext_fpn_backbone(base_backbone, ext_config)

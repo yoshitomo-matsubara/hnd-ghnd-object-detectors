@@ -17,9 +17,11 @@ dataset:
 
 model:
     name: &model_name 'mask_rcnn'
+    backbone:
+        name: &backbone_name 'resnet50'
+        params:
+            pretrained: True
     params:
-        backbone_name: &backbone_name 'resnet50'
-        backbone_pretrained: True
         num_classes: 91
         pretrained: True
     experiment: &experiment !join [*dataset_name, '-', *model_name, '-backbone_', *backbone_name]

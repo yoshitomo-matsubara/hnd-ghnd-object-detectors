@@ -3,7 +3,7 @@ dataset:
     task_name: 'coco_bbox'
     root: !join ['./resource/dataset/', *dataset_name, '/']
     num_workers: 4
-    aspect_ratio_group_factor: 0
+    aspect_ratio_group_factor: 3
     splits:
         train:
             name: 'train'
@@ -17,9 +17,11 @@ dataset:
 
 teacher_model:
     name: &teacher_model_name 'faster_rcnn'
+    backbone:
+        name: &teacher_backbone_name 'resnet101'
+        params:
+            pretrained: True
     params:
-        backbone_name: &teacher_backbone_name 'resnet101'
-        backbone_pretrained: True
         num_classes: 91
         pretrained: False
     experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '-backbone_', *teacher_backbone_name]
@@ -27,16 +29,18 @@ teacher_model:
 
 student_model:
     name: &student_model_name 'faster_rcnn'
+    backbone:
+        name: &student_backbone_name 'resnet50'
+        params:
+            pretrained: True
     params:
-        backbone_name: &student_backbone_name 'resnet50'
-        backbone_pretrained: True
         num_classes: 91
         pretrained: True
     experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
 
 train:
-    num_epochs: 13
+    num_epochs: 26
     batch_size: 2
     log_freq: 1000
     optimizer:
@@ -74,7 +78,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [8, 11]
+            milestones: [16, 22]
             gamma: 0.1
 
 test:

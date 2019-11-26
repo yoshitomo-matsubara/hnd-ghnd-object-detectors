@@ -39,7 +39,8 @@ def get_model(model_config, device, strict=True):
     ckpt_file_path = model_config['ckpt']
     model_params_config = model_config['params']
     if model_name in rcnn.MODEL_CLASS_DICT:
-        model = rcnn.get_model(model_name, strict=strict, **model_params_config)
+        backbone_config = model_config['backbone']
+        model = rcnn.get_model(model_name, backbone_config=backbone_config, strict=strict, **model_params_config)
     else:
         raise ValueError('model_name `{}` is not expected'.format(model_name))
 
