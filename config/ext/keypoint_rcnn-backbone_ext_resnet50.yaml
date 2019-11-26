@@ -1,7 +1,7 @@
 dataset:
     name: &dataset_name 'coco2017'
     task_name: 'coco_kp'
-    root: !join ['/home/yoshitom/dataset/', *dataset_name, '/']
+    root: !join ['./resource/dataset/', *dataset_name, '/']
     num_workers: 4
     aspect_ratio_group_factor: 3
     splits:
