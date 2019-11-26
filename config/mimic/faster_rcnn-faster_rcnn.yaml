@@ -51,31 +51,38 @@ train:
             momentum: 0.9
             weight_decay: 0.0001
     criterion:
-        type: 'hkd4rcnn'
+        type: 'general'
         params:
             org_loss_factor: 1.0
         terms:
-            fpn:
-                ts_modules: ['backbone.fpn', 'backbone.fpn']
-                criterion:
-                    type: 'MSELoss'
-                    params:
-                        reduction: 'mean'
-                factor: 0.5
-            roi_align:
-                ts_modules: ['roi_heads.box_roi_pool', 'roi_heads.box_roi_pool']
-                criterion:
-                    type: 'MSELoss'
-                    params:
-                        reduction: 'mean'
-                factor: 30.0
-            logit:
-                ts_modules: ['roi_heads.box_predictor', 'roi_heads.box_predictor']
+            layer1:
+                ts_modules: ['backbone.body.layer1', 'backbone.body.layer1']
                 criterion:
                     type: 'MSELoss'
                     params:
                         reduction: 'sum'
-                factor: 30.0
+                factor: 1.0
+            layer2:
+                ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer3:
+                ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer4:
+                ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
     scheduler:
         type: 'MultiStepLR'
         params:
