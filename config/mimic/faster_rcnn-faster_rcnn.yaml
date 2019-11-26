@@ -47,43 +47,41 @@ train:
     batch_size: 1
     log_freq: 1000
     optimizer:
-        type: 'SGD'
+        type: 'Adam'
         params:
-            lr: 0.0075  # 0.02 / 8 * num_gpus
-            momentum: 0.9
-            weight_decay: 0.0001
+            lr: 0.001
     criterion:
         type: 'general'
         params:
-            org_loss_factor: 1.0
+            org_loss_factor: 0.0
         terms:
             layer1:
                 ts_modules: ['backbone.body.layer1', 'backbone.body.layer1']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'mean'
+                        reduction: 'sum'
                 factor: 1.0
             layer2:
                 ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'mean'
+                        reduction: 'sum'
                 factor: 1.0
             layer3:
                 ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'mean'
+                        reduction: 'sum'
                 factor: 1.0
             layer4:
                 ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'mean'
+                        reduction: 'sum'
                 factor: 1.0
     scheduler:
         type: 'MultiStepLR'
