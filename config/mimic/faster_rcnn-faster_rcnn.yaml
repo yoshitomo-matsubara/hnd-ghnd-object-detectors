@@ -32,17 +32,18 @@ student_model:
     backbone:
         name: &student_backbone_name 'custom_resnet50'
         params:
-            pretrained: True
+            pretrained: False
+            freeze_layers: False
             layer1: 'Bottleneck4ResNet50'
     params:
         num_classes: 91
-        pretrained: True
+        pretrained: False
     experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
 
 train:
     num_epochs: 26
-    batch_size: 2
+    batch_size: 1
     log_freq: 1000
     optimizer:
         type: 'SGD'
@@ -60,28 +61,28 @@ train:
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'sum'
+                        reduction: 'mean'
                 factor: 1.0
             layer2:
                 ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'sum'
+                        reduction: 'mean'
                 factor: 1.0
             layer3:
                 ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'sum'
+                        reduction: 'mean'
                 factor: 1.0
             layer4:
                 ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
                 criterion:
                     type: 'MSELoss'
                     params:
-                        reduction: 'sum'
+                        reduction: 'mean'
                 factor: 1.0
     scheduler:
         type: 'MultiStepLR'

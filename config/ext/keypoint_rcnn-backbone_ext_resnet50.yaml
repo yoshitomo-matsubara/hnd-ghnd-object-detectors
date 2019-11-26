@@ -21,6 +21,7 @@ model:
         name: &backbone_name 'resnet50'
         params:
             pretrained: True
+            freeze_layers: True
         ext_config:
             backbone_frozen: True
             threshold: 0.5

@@ -383,11 +383,11 @@ def get_base_backbone(backbone_name, backbone_params_config):
     raise ValueError('backbone_name `{}` is not expected'.format(backbone_name))
 
 
-def get_fpn_backbone(backbone):
-    # freeze layers
-    for name, parameter in backbone.named_parameters():
-        if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
-            parameter.requires_grad_(False)
+def get_fpn_backbone(backbone, freeze_layers):
+    if freeze_layers:
+        for name, parameter in backbone.named_parameters():
+            if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+                parameter.requires_grad_(False)
 
     return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
 
@@ -418,11 +418,12 @@ def get_model(model_name, pretrained, backbone_config=None,
     if custom_backbone is None:
         base_backbone = get_base_backbone(backbone_name, backbone_params_config)
         ext_config = backbone_config.get('ext_config', None)
+        freeze_layers = backbone_params_config['freeze_layers']
         if ext_config is not None:
-            backbone = get_ext_fpn_backbone(base_backbone, ext_config)
+            backbone = get_ext_fpn_backbone(base_backbone, ext_config, freeze_layers)
             strict = False
         else:
-            backbone = get_fpn_backbone(base_backbone)
+            backbone = get_fpn_backbone(base_backbone, freeze_layers)
     else:
         backbone = custom_backbone
 

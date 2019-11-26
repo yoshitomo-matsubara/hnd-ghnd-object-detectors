@@ -21,6 +21,7 @@ model:
         name: &backbone_name 'resnet50'
         params:
             pretrained: True
+            freeze_layers: True
     params:
         num_classes: 91
         pretrained: True
