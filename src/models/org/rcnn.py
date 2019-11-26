@@ -408,8 +408,8 @@ def get_model_config(model_name):
     raise KeyError('model_name `{}` is not expected'.format(model_name))
 
 
-def get_model(model_name, pretrained, backbone_config=None,
-              progress=True, num_classes=91, custom_backbone=None, strict=True, **kwargs):
+def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
+              custom_backbone=None, strict=True, progress=True, **kwargs):
     backbone_name = backbone_config['name']
     backbone_params_config = backbone_config['params']
     if pretrained:
