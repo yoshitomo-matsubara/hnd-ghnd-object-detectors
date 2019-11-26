@@ -170,7 +170,7 @@ def main(args):
     if args.train:
         print('Start training')
         start_time = time.time()
-        ckpt_file_path = model_config['params']['ext_config']['ckpt']
+        ckpt_file_path = model_config['backbone']['ext_config']['ckpt']
         train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
               config, args, ckpt_file_path)
         total_time = time.time() - start_time
