@@ -103,11 +103,12 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     labels = np.concatenate(label_list)
     probs = np.concatenate(prob_list)
     roc_auc = metrics.roc_auc_score(labels, probs)
-    print('{} accuracy: {:.4f} ({} / {})'.format(split_name, accuracy, correct_count, num_samples))
-    print('{} recall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
-    print('{} specificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
+    print('[{}]'.format(split_name))
+    print('\tAccuracy: {:.4f} ({} / {})'.format(split_name, accuracy, correct_count, num_samples))
+    print('\tRecall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
+    print('\tSpecificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
                                                     num_samples - pos_count))
-    print('{} ROC-AUC: {:.4f}'.format(split_name, roc_auc))
+    print('\tROC-AUC: {:.4f}'.format(split_name, roc_auc))
     if split_name == 'Test':
         fprs, tprs, thrs = metrics.roc_curve(labels, preds, pos_label=1)
         idx = np.searchsorted(tprs, min_recall)
