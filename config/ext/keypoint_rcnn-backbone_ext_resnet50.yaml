@@ -33,7 +33,7 @@ model:
     ckpt: !join ['./resource/ckpt/org/', *experiment, '.pt']
 
 train:
-    num_epochs: 26
+    num_epochs: 46
     batch_size: 2
     log_freq: 10000
     optimizer:
@@ -45,7 +45,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [16, 22]
+            milestones: [36, 43]
             gamma: 0.1
 
 test:
