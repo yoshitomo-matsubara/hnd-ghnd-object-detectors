@@ -14,7 +14,7 @@ from torch import nn
 from models import get_model, load_ckpt, save_ckpt
 from models.ext.backbone import check_if_valid_target
 from myutils.common import file_util, yaml_util
-from myutils.pytorch import func_util
+from myutils.pytorch import func_util, module_util
 from utils import data_util, main_util, misc_util
 
 
@@ -164,6 +164,8 @@ def main(args):
     print('Creating model')
     model_config = config['model']
     model = get_model(model_config, device, strict=False)
+    module_util.freeze_module_params(model)
+    module_util.unfreeze_module_params(model.backbone.body.ext_classifier)
     model.ext_training = True
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)
