@@ -42,7 +42,7 @@ def get_model(model_config, device, strict=True):
         backbone_config = model_config['backbone']
         model = rcnn.get_model(model_name, backbone_config=backbone_config, strict=strict, **model_params_config)
         if 'ext_config' in backbone_config:
-            ext_config = model_params_config['ext_config']
+            ext_config = backbone_config['ext_config']
             load_ckpt(ext_config['ckpt'], model=model.backbone.body.ext_classifier)
             strict = False
     else:
