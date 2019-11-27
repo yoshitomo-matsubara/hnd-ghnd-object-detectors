@@ -27,12 +27,13 @@ def freeze_modules(student_model, student_model_config):
         module_util.freeze_module_params(student_module)
 
 
-def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_freq, device, epoch):
+def distill_model(distillation_box, data_loader, optimizer, log_freq, device, epoch):
     metric_logger = misc_util.MetricLogger(delimiter='  ')
     metric_logger.add_meter('lr', misc_util.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
+    lr_scheduler = None
     if epoch == 0:
-        warmup_factor = 1.0 / 1000.0
+        warmup_factor = 1.0 / 1000
         warmup_iters = min(1000, len(data_loader) - 1)
         lr_scheduler = main_util.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
@@ -65,7 +66,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
     best_val_map = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
 
@@ -73,7 +74,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         student_model.train()
         teacher_model.distill_backbone_only = distill_backbone_only
         student_model.distill_backbone_only = distill_backbone_only
-        distill_model(distillation_box, train_data_loader, optimizer, lr_scheduler, log_freq, device, epoch)
+        distill_model(distillation_box, train_data_loader, optimizer, log_freq, device, epoch)
         student_model.distill_backbone_only = False
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
@@ -81,6 +82,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         if val_map > best_val_map:
             best_val_map = val_map
             save_ckpt(student_model, optimizer, lr_scheduler, config, args, ckpt_file_path)
+        lr_scheduler.step()
 
 
 def evaluate(teacher_model, student_model, test_data_loader, device):
