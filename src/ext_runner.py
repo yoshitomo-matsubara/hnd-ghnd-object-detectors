@@ -14,7 +14,7 @@ from torch import nn
 from models import get_model, load_ckpt, save_ckpt
 from models.ext.backbone import check_if_valid_target
 from myutils.common import file_util, yaml_util
-from myutils.pytorch import func_util
+from myutils.pytorch import func_util, module_util
 from utils import data_util, main_util, misc_util
 
 
@@ -100,17 +100,17 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     accuracy = correct_count / num_samples
     recall = pos_correct_count / pos_count
     specificity = (correct_count - pos_correct_count) / (num_samples - pos_count)
-    labels = np.concatenate(label_list)
     probs = np.concatenate(prob_list)
+    labels = np.concatenate(label_list)
     roc_auc = metrics.roc_auc_score(labels, probs)
     print('[{}]'.format(split_name))
-    print('\tAccuracy: {:.4f} ({} / {})'.format(split_name, accuracy, correct_count, num_samples))
-    print('\tRecall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
-    print('\tSpecificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
-                                                    num_samples - pos_count))
-    print('\tROC-AUC: {:.4f}'.format(split_name, roc_auc))
+    print('\tAccuracy: {:.4f} ({} / {})'.format(accuracy, correct_count, num_samples))
+    print('\tRecall: {:.4f} ({} / {})'.format(recall, pos_correct_count, pos_count))
+    print('\tSpecificity: {:.4f} ({} / {})'.format(specificity, correct_count - pos_correct_count,
+                                                   num_samples - pos_count))
+    print('\tROC-AUC: {:.4f}'.format(roc_auc))
     if split_name == 'Test':
-        fprs, tprs, thrs = metrics.roc_curve(labels, preds, pos_label=1)
+        fprs, tprs, thrs = metrics.roc_curve(labels, probs, pos_label=1)
         idx = np.searchsorted(tprs, min_recall)
 
         data_frame =\
@@ -130,7 +130,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     if file_util.check_if_exists(ckpt_file_path):
         load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
-    best_val_recall = 0.0
+    best_val_roc_auc = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
     for epoch in range(num_epochs):
@@ -142,8 +142,9 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
 
         # evaluate after every epoch
         val_roc_auc = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
-        if val_roc_auc > best_val_recall:
-            best_val_recall = val_roc_auc
+        if val_roc_auc > best_val_roc_auc:
+            print('Updating ckpt (Best ROC-AUC: {:.4f} -> {:.4f})'.format(best_val_roc_auc, val_roc_auc))
+            best_val_roc_auc = val_roc_auc
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 
@@ -155,7 +156,6 @@ def main(args):
 
     device = torch.device(args.device)
     print(args)
-
     print('Loading data')
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader =\
@@ -164,6 +164,9 @@ def main(args):
     print('Creating model')
     model_config = config['model']
     model = get_model(model_config, device, strict=False)
+    module_util.freeze_module_params(model)
+    module_util.unfreeze_module_params(model.backbone.body.ext_classifier)
+    print('Updatable parameters: {}'.format(module_util.get_updatable_param_names(model)))
     model.ext_training = True
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)

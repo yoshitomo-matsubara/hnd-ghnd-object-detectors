@@ -80,6 +80,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
         if val_map > best_val_map:
+            print('Updating ckpt (Best BBox mAP: {:.4f} -> {:.4f})'.format(best_val_map, val_map))
             best_val_map = val_map
             save_ckpt(student_model, optimizer, lr_scheduler, config, args, ckpt_file_path)
         lr_scheduler.step()
@@ -105,6 +106,7 @@ def main(args):
     student_model_config = config['student_model']
     student_model = get_model(student_model_config, device)
     freeze_modules(student_model, student_model_config)
+    print('Updatable parameters: {}'.format(module_util.get_updatable_param_names(student_model)))
     distill_backbone_only = student_model_config['distill_backbone_only']
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader = \
