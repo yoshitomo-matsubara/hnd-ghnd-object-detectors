@@ -4,9 +4,8 @@ import torch
 
 from distillation.tool import DistillationBox
 from models import load_ckpt, get_model, save_ckpt
-from myutils.common import file_util
-from myutils.common import yaml_util
-from myutils.pytorch import func_util
+from myutils.common import file_util, yaml_util
+from myutils.pytorch import func_util, module_util
 from utils import data_util, main_util, misc_util
 
 
@@ -22,10 +21,17 @@ def get_argparser():
     return argparser
 
 
-def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_freq, device, epoch):
+def freeze_modules(student_model, student_model_config):
+    for student_path in student_model_config['frozen_modules']:
+        student_module = module_util.get_module(student_model, student_path)
+        module_util.freeze_module_params(student_module)
+
+
+def distill_model(distillation_box, data_loader, optimizer, log_freq, device, epoch):
     metric_logger = misc_util.MetricLogger(delimiter='  ')
     metric_logger.add_meter('lr', misc_util.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
+    lr_scheduler = None
     if epoch == 0:
         warmup_factor = 1.0 / 1000.0
         warmup_iters = min(1000, len(data_loader) - 1)
@@ -46,7 +52,7 @@ def distill_model(distillation_box, data_loader, optimizer, lr_scheduler, log_fr
 
 
 def distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
-            device, distributed, config, args):
+            device, distributed, distill_backbone_only, config, args):
     train_config = config['train']
     distillation_box = DistillationBox(teacher_model, student_model, train_config['criterion'])
     ckpt_file_path = config['student_model']['ckpt']
@@ -60,22 +66,28 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
     best_val_map = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
 
         teacher_model.eval()
         student_model.train()
-        distill_model(distillation_box, train_data_loader, optimizer, lr_scheduler, log_freq, device, epoch)
+        teacher_model.distill_backbone_only = distill_backbone_only
+        student_model.distill_backbone_only = distill_backbone_only
+        distill_model(distillation_box, train_data_loader, optimizer, log_freq, device, epoch)
+        student_model.distill_backbone_only = False
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
         if val_map > best_val_map:
             best_val_map = val_map
             save_ckpt(student_model, optimizer, lr_scheduler, config, args, ckpt_file_path)
+        lr_scheduler.step()
 
 
 def evaluate(teacher_model, student_model, test_data_loader, device):
+    teacher_model.distill_backbone_only = False
+    student_model.distill_backbone_only = False
     print('[Teacher model]')
     main_util.evaluate(teacher_model, test_data_loader, device=device)
     print('\n[Student model]')
@@ -90,13 +102,16 @@ def main(args):
     distributed, _ = main_util.init_distributed_mode(args.world_size, args.dist_url)
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     teacher_model = get_model(config['teacher_model'], device)
-    student_model = get_model(config['student_model'], device)
+    student_model_config = config['student_model']
+    student_model = get_model(student_model_config, device)
+    freeze_modules(student_model, student_model_config)
+    distill_backbone_only = student_model_config['distill_backbone_only']
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader = \
         data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
     if args.distill:
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
-                device, distributed, config, args)
+                device, distributed, distill_backbone_only, config, args)
     evaluate(teacher_model, student_model, test_data_loader, device)
 
 

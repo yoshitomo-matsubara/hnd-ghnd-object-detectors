@@ -3,7 +3,7 @@ dataset:
     task_name: 'coco_kp'
     root: !join ['./resource/dataset/', *dataset_name, '/']
     num_workers: 4
-    aspect_ratio_group_factor: 0
+    aspect_ratio_group_factor: 3
     splits:
         train:
             name: 'train'
@@ -15,13 +15,14 @@ dataset:
             name: 'val'
             remove_non_annotated_imgs: False
 
-input_shape: [3, 300, 400]
-
 model:
     name: &model_name 'keypoint_rcnn'
+    backbone:
+        name: &backbone_name 'resnet50'
+        params:
+            pretrained: True
+            freeze_layers: True
     params:
-        backbone_name: &backbone_name 'resnet50'
-        backbone_pretrained: True
         num_classes: 2
         num_keypoints: 17
         pretrained: True
@@ -29,7 +30,7 @@ model:
     ckpt: !join ['./resource/ckpt/org/', *experiment, '.pt']
 
 train:
-    num_epochs: 13
+    num_epochs: 46
     batch_size: 2
     log_freq: 1000
     optimizer:
@@ -41,7 +42,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [8, 11]
+            milestones: [36, 43]
             gamma: 0.1
 
 test:

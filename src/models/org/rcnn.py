@@ -16,8 +16,10 @@ from torchvision.models.utils import load_state_dict_from_url
 from torchvision.ops import MultiScaleRoIAlign
 from torchvision.ops import misc as misc_nn_ops
 
+from models import custom
 from models.ext import get_ext_fpn_backbone
 from models.ext.backbone import ExtIntermediateLayerGetter
+from models.mimic.resnet_layer import get_mimic_layers
 
 
 class CustomRCNNTransform(GeneralizedRCNNTransform):
@@ -88,6 +90,7 @@ class CustomRCNN(nn.Module):
         self.rpn = rpn
         self.roi_heads = roi_heads
         self.ext_training = False
+        self.distill_backbone_only = False
 
     def forward(self, images, targets=None, fixed_sizes=None):
         if self.training and targets is None:
@@ -95,6 +98,9 @@ class CustomRCNN(nn.Module):
         original_image_sizes = [img.shape[-2:] for img in images]
         images, targets = self.transform(images, targets, fixed_sizes)
         features = self.backbone(images.tensors)
+        if self.distill_backbone_only:
+            return features
+
         loss_dict = dict()
         if isinstance(self.backbone.body, ExtIntermediateLayerGetter):
             features, ext_logits = features
@@ -360,7 +366,7 @@ MODEL_URL_DICT = {
     'maskrcnn_resnet50_fpn_coco':
         'https://download.pytorch.org/models/maskrcnn_resnet50_fpn_coco-bf2d0c1e.pth',
     'keypointrcnn_resnet50_fpn_coco':
-        'https://download.pytorch.org/models/keypointrcnn_resnet50_fpn_coco-9f466800.pth'
+        'https://download.pytorch.org/models/keypointrcnn_resnet50_fpn_coco-fc266e95.pth'
 }
 
 MODEL_CLASS_DICT = {
@@ -370,17 +376,22 @@ MODEL_CLASS_DICT = {
 }
 
 
-def get_base_backbone(backbone_name, pretrained):
+def get_base_backbone(backbone_name, backbone_params_config):
+    pretrained = backbone_params_config['pretrained']
     if backbone_name.startswith('resnet'):
         return resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
+    elif backbone_name.startswith('custom_resnet'):
+        layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_params_config)
+        return custom.resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d,
+                                                     layer1=layer1, layer2=layer2, layer3=layer3, layer4=layer4)
     raise ValueError('backbone_name `{}` is not expected'.format(backbone_name))
 
 
-def get_fpn_backbone(backbone):
-    # freeze layers
-    for name, parameter in backbone.named_parameters():
-        if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
-            parameter.requires_grad_(False)
+def get_fpn_backbone(backbone, freeze_layers):
+    if freeze_layers:
+        for name, parameter in backbone.named_parameters():
+            if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+                parameter.requires_grad_(False)
 
     return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
 
@@ -401,18 +412,22 @@ def get_model_config(model_name):
     raise KeyError('model_name `{}` is not expected'.format(model_name))
 
 
-def get_model(model_name, pretrained, backbone_name=None, backbone_pretrained=True,
-              progress=True, num_classes=91, custom_backbone=None, ext_config=None, strict=True, **kwargs):
+def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
+              custom_backbone=None, strict=True, progress=True, **kwargs):
+    backbone_name = backbone_config['name']
+    backbone_params_config = backbone_config['params']
     if pretrained:
-        backbone_pretrained = False
+        backbone_params_config['pretrained'] = False
 
     if custom_backbone is None:
-        base_backbone = get_base_backbone(backbone_name, backbone_pretrained)
+        base_backbone = get_base_backbone(backbone_name, backbone_params_config)
+        ext_config = backbone_config.get('ext_config', None)
+        freeze_layers = backbone_params_config['freeze_layers']
         if ext_config is not None:
-            backbone = get_ext_fpn_backbone(base_backbone, ext_config)
+            backbone = get_ext_fpn_backbone(base_backbone, ext_config, freeze_layers)
             strict = False
         else:
-            backbone = get_fpn_backbone(base_backbone)
+            backbone = get_fpn_backbone(base_backbone, freeze_layers)
     else:
         backbone = custom_backbone
 

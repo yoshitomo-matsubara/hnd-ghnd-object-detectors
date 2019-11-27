@@ -100,19 +100,24 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     accuracy = correct_count / num_samples
     recall = pos_correct_count / pos_count
     specificity = (correct_count - pos_correct_count) / (num_samples - pos_count)
-    print('{} accuracy: {:.4f} ({} / {})'.format(split_name, accuracy, correct_count, num_samples))
-    print('{} recall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
-    print('{} specificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
+    labels = np.concatenate(label_list)
+    probs = np.concatenate(prob_list)
+    roc_auc = metrics.roc_auc_score(labels, probs)
+    print('[{}]'.format(split_name))
+    print('\tAccuracy: {:.4f} ({} / {})'.format(split_name, accuracy, correct_count, num_samples))
+    print('\tRecall: {:.4f} ({} / {})'.format(split_name, recall, pos_correct_count, pos_count))
+    print('\tSpecificity: {:.4f} ({} / {})'.format(split_name, specificity, correct_count - pos_correct_count,
                                                     num_samples - pos_count))
+    print('\tROC-AUC: {:.4f}'.format(split_name, roc_auc))
     if split_name == 'Test':
-        fprs, tprs, thrs = metrics.roc_curve(np.concatenate(label_list), np.concatenate(prob_list), pos_label=1)
+        fprs, tprs, thrs = metrics.roc_curve(labels, preds, pos_label=1)
         idx = np.searchsorted(tprs, min_recall)
 
         data_frame =\
             pd.DataFrame(np.array([thrs[idx:], tprs[idx:], fprs[idx:]]).T, columns=['Threshold', 'TPR (Recall)', 'FPR'])
         with pd.option_context('display.max_rows', None, 'display.max_columns', None):
             print(data_frame)
-    return recall
+    return roc_auc
 
 
 def train(model, train_sampler, train_data_loader, val_data_loader, device, distributed, config, args, ckpt_file_path):
@@ -128,7 +133,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     best_val_recall = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
 
@@ -136,9 +141,9 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         lr_scheduler.step()
 
         # evaluate after every epoch
-        val_recall = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
-        if val_recall > best_val_recall:
-            best_val_recall = val_recall
+        val_roc_auc = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
+        if val_roc_auc > best_val_recall:
+            best_val_recall = val_roc_auc
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 
@@ -166,7 +171,7 @@ def main(args):
     if args.train:
         print('Start training')
         start_time = time.time()
-        ckpt_file_path = model_config['params']['ext_config']['ckpt']
+        ckpt_file_path = model_config['backbone']['ext_config']['ckpt']
         train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
               config, args, ckpt_file_path)
         total_time = time.time() - start_time

@@ -3,7 +3,7 @@ dataset:
     task_name: 'coco_bbox'
     root: !join ['./resource/dataset/', *dataset_name, '/']
     num_workers: 4
-    aspect_ratio_group_factor: 0
+    aspect_ratio_group_factor: 3
     splits:
         train:
             name: 'train'
@@ -17,64 +17,78 @@ dataset:
 
 teacher_model:
     name: &teacher_model_name 'faster_rcnn'
+    backbone:
+        name: &teacher_backbone_name 'resnet50'
+        params:
+            pretrained: True
+            freeze_layers: True
     params:
-        backbone_name: &teacher_backbone_name 'resnet101'
-        backbone_pretrained: True
         num_classes: 91
-        pretrained: False
+        pretrained: True
     experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '-backbone_', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/org/', *teacher_experiment, '.pt']
 
 student_model:
     name: &student_model_name 'faster_rcnn'
+    backbone:
+        name: &student_backbone_name 'custom_resnet50'
+        params:
+            pretrained: True
+            freeze_layers: False
+            layer1: 'Bottleneck4ResNet50'
     params:
-        backbone_name: &student_backbone_name 'resnet50'
-        backbone_pretrained: True
         num_classes: 91
         pretrained: True
+    distill_backbone_only: True
+    frozen_modules: ['backbone.fpn', 'rpn', 'roi_heads']
     experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name]
     ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
 
 train:
-    num_epochs: 13
-    batch_size: 2
+    num_epochs: 26
+    batch_size: 1
     log_freq: 1000
     optimizer:
-        type: 'SGD'
+        type: 'Adam'
         params:
-            lr: 0.0075  # 0.02 / 8 * num_gpus
-            momentum: 0.9
-            weight_decay: 0.0001
+            lr: 0.001
     criterion:
-        type: 'hkd4rcnn'
+        type: 'general'
         params:
-            org_loss_factor: 1.0
+            org_loss_factor: 0.0
         terms:
-            fpn:
-                ts_modules: ['backbone.fpn', 'backbone.fpn']
-                criterion:
-                    type: 'MSELoss'
-                    params:
-                        reduction: 'mean'
-                factor: 0.5
-            roi_align:
-                ts_modules: ['roi_heads.box_roi_pool', 'roi_heads.box_roi_pool']
-                criterion:
-                    type: 'MSELoss'
-                    params:
-                        reduction: 'mean'
-                factor: 30.0
-            logit:
-                ts_modules: ['roi_heads.box_predictor', 'roi_heads.box_predictor']
+            layer1:
+                ts_modules: ['backbone.body.layer1', 'backbone.body.layer1']
                 criterion:
                     type: 'MSELoss'
                     params:
                         reduction: 'sum'
-                factor: 30.0
+                factor: 1.0
+            layer2:
+                ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer3:
+                ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer4:
+                ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [8, 11]
+            milestones: [16, 22]
             gamma: 0.1
 
 test:

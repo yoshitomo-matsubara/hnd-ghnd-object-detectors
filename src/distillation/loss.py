@@ -18,6 +18,22 @@ class CustomLoss(nn.Module):
         raise NotImplementedError('forward function is not implemented')
 
 
+class GeneralizedCustomLoss(CustomLoss):
+    def __init__(self, criterion_config):
+        super().__init__(criterion_config)
+
+    def forward(self, output_dict, org_loss_dict):
+        loss_dict = dict()
+        for loss_name, ((teacher_path, teacher_output), (student_path, student_output)) in output_dict.items():
+            _, criterion, factor = self.term_dict[loss_name]
+            loss_dict[loss_name] = criterion(teacher_output, student_output) * factor
+
+        sub_total_loss = sum(loss for loss in loss_dict.values())
+        if self.org_loss_factor == 0:
+            return sub_total_loss
+        return sub_total_loss + sum(loss for loss in org_loss_dict.values())
+
+
 class HKDLoss4RCNN(CustomLoss):
     """
     Hierarchical Knowledge Distillation loss (when org_loss_factor = 0.0) defined in
@@ -42,15 +58,16 @@ class HKDLoss4RCNN(CustomLoss):
             elif teacher_path == 'roi_heads.box_predictor':
                 # TODO: check shape of each output to see #proposals
                 kd_loss_dict[loss_name] =\
-                    sum([criterion(to_i, so_i) for to_i, so_i in zip(teacher_output, student_output)]) / 2 * factor
+                    sum(criterion(to_i, so_i) for to_i, so_i in zip(teacher_output, student_output)) / 2 * factor
             else:
                 kd_loss_dict[loss_name] = criterion(teacher_output, student_output) * factor
 
         org_loss = sum(loss for loss in org_loss_dict.values())
-        return org_loss * self.org_loss_factor + sum([loss for loss in kd_loss_dict.values()])
+        return org_loss * self.org_loss_factor + sum(loss for loss in kd_loss_dict.values())
 
 
 LOSS_DICT = {
+    'general': GeneralizedCustomLoss,
     'hkd4rcnn': HKDLoss4RCNN
 }
 
