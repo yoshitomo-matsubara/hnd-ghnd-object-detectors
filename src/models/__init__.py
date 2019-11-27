@@ -23,13 +23,13 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None, str
 
     ckpt = torch.load(ckpt_file_path, map_location='cpu')
     if model is not None:
-        print('loading model parameters')
+        print('Loading model parameters')
         model.load_state_dict(ckpt['model'], strict=strict)
     if optimizer is not None:
-        print('loading optimizer parameters')
+        print('Loading optimizer parameters')
         optimizer.load_state_dict(ckpt['optimizer'])
     if lr_scheduler is not None:
-        print('loading scheduler parameters')
+        print('Loading scheduler parameters')
         lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
     return ckpt.get('config', None), ckpt.get('args', None)
 
@@ -41,13 +41,12 @@ def get_model(model_config, device, strict=True):
     if model_name in rcnn.MODEL_CLASS_DICT:
         backbone_config = model_config['backbone']
         model = rcnn.get_model(model_name, backbone_config=backbone_config, strict=strict, **model_params_config)
+        if 'ext_config' in backbone_config:
+            ext_config = model_params_config['ext_config']
+            load_ckpt(ext_config['ckpt'], model=model.backbone.body.ext_classifier)
+            strict = False
     else:
         raise ValueError('model_name `{}` is not expected'.format(model_name))
-
-    if 'ext_config' in model_params_config:
-        strict = False
-        ext_config = model_params_config['ext_config']
-        load_ckpt(ext_config['ckpt'], model=model.backbone.body.ext_classifier)
 
     load_ckpt(ckpt_file_path, model=model, strict=strict)
     return model.to(device)
