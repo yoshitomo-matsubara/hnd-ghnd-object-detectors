@@ -35,7 +35,9 @@ student_model:
         params:
             pretrained: True
             freeze_layers: False
-            layer1: 'Bottleneck4ResNet50'
+            layer1:
+                name: 'Bottleneck4ResNet50'
+                bottleneck_channel: 3
     params:
         num_classes: 91
         pretrained: True
