@@ -130,7 +130,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     if file_util.check_if_exists(ckpt_file_path):
         load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
 
-    best_val_recall = 0.0
+    best_val_roc_auc = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
     for epoch in range(num_epochs):
@@ -142,8 +142,9 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
 
         # evaluate after every epoch
         val_roc_auc = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
-        if val_roc_auc > best_val_recall:
-            best_val_recall = val_roc_auc
+        if val_roc_auc > best_val_roc_auc:
+            print('Updating ckpt (ROC-AUC: {:.4f} > {:.4f})'.format(val_roc_auc, best_val_roc_auc))
+            best_val_roc_auc = val_roc_auc
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 
@@ -155,7 +156,6 @@ def main(args):
 
     device = torch.device(args.device)
     print(args)
-
     print('Loading data')
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader =\
