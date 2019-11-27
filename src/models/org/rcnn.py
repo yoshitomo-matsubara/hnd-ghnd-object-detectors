@@ -434,6 +434,9 @@ def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
     model_class, pretrained_key = get_model_config(model_name)
     model = model_class(backbone, num_classes, **kwargs)
     if pretrained and backbone_name.endswith('resnet50'):
+        if backbone_name != 'resnet50':
+            strict = False
+            
         state_dict = load_state_dict_from_url(MODEL_URL_DICT[pretrained_key], progress=progress)
         model.load_state_dict(state_dict, strict=strict)
     return model
