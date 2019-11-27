@@ -105,6 +105,7 @@ def main(args):
     student_model_config = config['student_model']
     student_model = get_model(student_model_config, device)
     freeze_modules(student_model, student_model_config)
+    print('Updatable parameters: {}'.format(module_util.get_updatable_param_names(student_model)))
     distill_backbone_only = student_model_config['distill_backbone_only']
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader = \
