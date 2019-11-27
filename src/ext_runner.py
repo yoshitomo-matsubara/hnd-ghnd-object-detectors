@@ -133,7 +133,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
     best_val_recall = 0.0
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
-    for epoch in range(1, num_epochs + 1):
+    for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
 
@@ -141,9 +141,9 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         lr_scheduler.step()
 
         # evaluate after every epoch
-        val_recall = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
-        if val_recall > best_val_recall:
-            best_val_recall = val_recall
+        val_roc_auc = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
+        if val_roc_auc > best_val_recall:
+            best_val_recall = val_roc_auc
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
 

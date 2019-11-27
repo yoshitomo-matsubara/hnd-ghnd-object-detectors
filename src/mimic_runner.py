@@ -33,7 +33,7 @@ def distill_model(distillation_box, data_loader, optimizer, log_freq, device, ep
     header = 'Epoch: [{}]'.format(epoch)
     lr_scheduler = None
     if epoch == 0:
-        warmup_factor = 1.0 / 1000
+        warmup_factor = 1.0 / 1000.0
         warmup_iters = min(1000, len(data_loader) - 1)
         lr_scheduler = main_util.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
