@@ -35,7 +35,7 @@ class Bottleneck4ResNet50(nn.Module):
 
 def get_mimic_layers(backbone_name, backbone_params_config):
     layer1, layer2, layer3, layer4 = None, None, None, None
-    if backbone_params_config['layer1'] is None and backbone_name == 'custom_resnet50':
+    if backbone_params_config['layer1'] == 'Bottleneck4ResNet50' and backbone_name == 'custom_resnet50':
         layer1 = Bottleneck4ResNet50()
     return layer1, layer2, layer3, layer4
 
