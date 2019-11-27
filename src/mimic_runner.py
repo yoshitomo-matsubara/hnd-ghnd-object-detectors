@@ -74,6 +74,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         teacher_model.distill_backbone_only = distill_backbone_only
         student_model.distill_backbone_only = distill_backbone_only
         distill_model(distillation_box, train_data_loader, optimizer, lr_scheduler, log_freq, device, epoch)
+        student_model.distill_backbone_only = False
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
