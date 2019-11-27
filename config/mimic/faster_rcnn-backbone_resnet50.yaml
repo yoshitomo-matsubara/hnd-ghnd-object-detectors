@@ -45,7 +45,7 @@ student_model:
     ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
 
 train:
-    num_epochs: 26
+    num_epochs: 20
     batch_size: 1
     log_freq: 1000
     optimizer:
@@ -88,7 +88,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [16, 22]
+            milestones: [10, 15]
             gamma: 0.1
 
 test:
