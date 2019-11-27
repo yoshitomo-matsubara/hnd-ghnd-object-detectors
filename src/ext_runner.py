@@ -166,6 +166,7 @@ def main(args):
     model = get_model(model_config, device, strict=False)
     module_util.freeze_module_params(model)
     module_util.unfreeze_module_params(model.backbone.body.ext_classifier)
+    print('Updatable parameters: {}'.format(module_util.get_updatable_param_names(model)))
     model.ext_training = True
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)
