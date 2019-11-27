@@ -143,7 +143,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         # evaluate after every epoch
         val_roc_auc = evaluate(model, val_data_loader, device, min_recall=args.min_recall, split_name='Validation')
         if val_roc_auc > best_val_roc_auc:
-            print('Updating ckpt (ROC-AUC: {:.4f} > {:.4f})'.format(val_roc_auc, best_val_roc_auc))
+            print('Updating ckpt (Best ROC-AUC: {:.4f} -> {:.4f})'.format(best_val_roc_auc, val_roc_auc))
             best_val_roc_auc = val_roc_auc
             save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
 
