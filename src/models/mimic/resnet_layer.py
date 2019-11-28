@@ -21,6 +21,7 @@ class Bottleneck4ResNet50(nn.Module):
             nn.BatchNorm2d(64),
             nn.Conv2d(64, 128, kernel_size=2, bias=False),
             nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
             nn.Conv2d(128, 256, kernel_size=2, bias=False),
             nn.BatchNorm2d(256),
             nn.Conv2d(256, 256, kernel_size=2, bias=False),
