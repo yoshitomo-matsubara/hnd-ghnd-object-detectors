@@ -36,7 +36,7 @@ student_model:
             pretrained: True
             freeze_layers: False
             layer1:
-                name: 'Bottleneck4ResNet50'
+                name: 'Bottleneck4LargeResNet'
                 bottleneck_channel: 3
     params:
         num_classes: 91
@@ -90,7 +90,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [10, 15]
+            milestones: [5, 15]
             gamma: 0.1
 
 test:
