@@ -393,8 +393,7 @@ def get_fpn_backbone(backbone, freeze_layers):
             if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
                 parameter.requires_grad_(False)
 
-    return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
-
+    return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
     in_channels_stage2 = backbone.inplanes // 8
     in_channels_list = [
         in_channels_stage2,
@@ -436,7 +435,7 @@ def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
     if pretrained and backbone_name.endswith('resnet50'):
         if backbone_name != 'resnet50':
             strict = False
-            
+
         state_dict = load_state_dict_from_url(MODEL_URL_DICT[pretrained_key], progress=progress)
         model.load_state_dict(state_dict, strict=strict)
     return model
