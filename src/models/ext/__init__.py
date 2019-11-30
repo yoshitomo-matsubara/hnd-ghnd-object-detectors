@@ -7,7 +7,7 @@ def get_ext_fpn_backbone(base_backbone, ext_config, freeze_layers):
             if 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
                 parameter.requires_grad_(False)
 
-    return_layers = {'layer1': '0', 'layer2': '1', 'layer3': '2', 'layer4': '3'}
+    return_layers = {'layer1': 0, 'layer2': 1, 'layer3': 2, 'layer4': 3}
     in_channels_stage2 = base_backbone.inplanes // 8
     in_channels_list = [
         in_channels_stage2,
