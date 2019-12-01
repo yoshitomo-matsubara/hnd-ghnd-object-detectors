@@ -378,9 +378,9 @@ MODEL_CLASS_DICT = {
 
 def get_base_backbone(backbone_name, backbone_params_config):
     pretrained = backbone_params_config['pretrained']
-    if backbone_name.startswith('resnet'):
+    if backbone_name.startswith('resne') or backbone_name.startswith('wide_resne'):
         return resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
-    elif backbone_name.startswith('custom_resnet'):
+    elif backbone_name.startswith('custom_resne') or backbone_name.startswith('custom_wide_resne'):
         layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_params_config)
         return custom.resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d,
                                                      layer1=layer1, layer2=layer2, layer3=layer3, layer4=layer4)
