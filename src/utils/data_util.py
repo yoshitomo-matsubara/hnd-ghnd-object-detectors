@@ -10,8 +10,8 @@ def get_coco_dataset(split_dict, is_train):
     transforms = [ToTensor()]
     if is_train:
         transforms.append(RandomHorizontalFlip(0.5))
-    return get_coco(img_dir_path=['images'], ann_file_path=split_dict['annotations'], transforms=Compose(transforms),
-                    remove_non_annotated_imgs=split_dict['remove_non_annotated_imgs'])
+    return get_coco(img_dir_path=split_dict['images'], ann_file_path=split_dict['annotations'],
+                    transforms=Compose(transforms), remove_non_annotated_imgs=split_dict['remove_non_annotated_imgs'])
 
 
 def get_coco_data_loaders(dataset_config, batch_size, distributed):
