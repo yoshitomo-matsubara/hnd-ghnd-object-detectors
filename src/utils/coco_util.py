@@ -1,5 +1,4 @@
 import copy
-import os
 
 import torch
 import torch.utils.data
@@ -219,23 +218,13 @@ class CocoDetection(torchvision.datasets.CocoDetection):
         return img, target
 
 
-def get_coco(root_dir_path, split_name, transforms, mode, remove_non_annotated_imgs):
-    anno_file_template = '{}_{}2017.json'
-    PATHS = {
-        'train': ('train2017', os.path.join('annotations', anno_file_template.format(mode, 'train'))),
-        'val': ('val2017', os.path.join('annotations', anno_file_template.format(mode, 'val')))
-    }
+def get_coco(img_dir_path, ann_file_path, transforms, remove_non_annotated_imgs):
     t = [ConvertCocoPolysToMask()]
     if transforms is not None:
         t.append(transforms)
 
     transforms = Compose(t)
-
-    img_folder, ann_file = PATHS[split_name]
-    img_folder = os.path.join(root_dir_path, img_folder)
-    ann_file = os.path.join(root_dir_path, ann_file)
-    dataset = CocoDetection(img_folder, ann_file, transforms=transforms)
-
+    dataset = CocoDetection(img_dir_path, ann_file_path, transforms=transforms)
     if remove_non_annotated_imgs:
         dataset = remove_images_without_annotations(dataset)
     return dataset

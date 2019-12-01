@@ -1,18 +1,20 @@
 dataset:
     name: &dataset_name 'coco2017'
-    task_name: 'coco_bbox'
-    root: !join ['./resource/dataset/', *dataset_name, '/']
+    root: &root_dir !join ['./resource/dataset/', *dataset_name]
     num_workers: 4
     aspect_ratio_group_factor: 3
     splits:
         train:
-            name: 'train'
+            images: !join [*root_dir, '/train2017']
+            annotations: !join [*root_dir, '/annotations/instances_train2017.json']
             remove_non_annotated_imgs: True
         val:
-            name: 'val'
+            images: !join [*root_dir, '/val2017']
+            annotations: !join [*root_dir, '/annotations/instances_val2017.json']
             remove_non_annotated_imgs: False
         test:
-            name: 'val'
+            images: !join [*root_dir, '/val2017']
+            annotations: !join [*root_dir, '/annotations/instances_val2017.json']
             remove_non_annotated_imgs: False
 
 model:
@@ -29,7 +31,7 @@ model:
     ckpt: !join ['./resource/ckpt/org/', *experiment, '.pt']
 
 train:
-    num_epochs: 46
+    num_epochs: 26
     batch_size: 2
     log_freq: 1000
     optimizer:
