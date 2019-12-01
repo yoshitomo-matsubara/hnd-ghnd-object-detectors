@@ -114,6 +114,7 @@ def main(args):
     if args.distill:
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
                 device, distributed, distill_backbone_only, config, args)
+        load_ckpt(config['student_model']['ckpt'], model=student_model)
     evaluate(teacher_model, student_model, test_data_loader, device)
 
 
