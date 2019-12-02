@@ -8,14 +8,17 @@ dataset:
             images: !join [*root_dir, '/train2017']
             annotations: !join [*root_dir, '/annotations/instances_train2017.json']
             remove_non_annotated_imgs: True
+            jpeg_quality:
         val:
             images: !join [*root_dir, '/val2017']
             annotations: !join [*root_dir, '/annotations/instances_val2017.json']
             remove_non_annotated_imgs: False
+            jpeg_quality:
         test:
             images: !join [*root_dir, '/val2017']
             annotations: !join [*root_dir, '/annotations/instances_val2017.json']
             remove_non_annotated_imgs: False
+            jpeg_quality:
 
 model:
     name: &model_name 'faster_rcnn'
