@@ -19,7 +19,7 @@ def get_argparser():
     argparser.add_argument('--device', default='cuda', help='device')
     argparser.add_argument('--json', help='dictionary to overwrite config')
     argparser.add_argument('--file_size', help='dataset split name to analyze file size')
-    argparser.add_argument('-model_param', help='dictionary to overwrite config')
+    argparser.add_argument('-model_params', help='dictionary to overwrite config')
     argparser.add_argument('--modules', nargs='+', help='list of specific modules you want to count parameters')
     return argparser
 
