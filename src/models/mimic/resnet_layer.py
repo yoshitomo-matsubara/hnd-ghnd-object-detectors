@@ -35,7 +35,7 @@ class Bottleneck4SmallResNet(BottleneckBase4Ext):
         super().__init__(encoder=encoder, decoder=decoder)
 
     def get_ext_classifier(self):
-        return self.decoder.get_ext_classifier()
+        return self.encoder.get_ext_classifier()
 
 
 class Bottleneck4LargeResNet(BottleneckBase4Ext):
@@ -69,7 +69,7 @@ class Bottleneck4LargeResNet(BottleneckBase4Ext):
         super().__init__(encoder=encoder, decoder=decoder)
 
     def get_ext_classifier(self):
-        return self.decoder.get_ext_classifier()
+        return self.encoder.get_ext_classifier()
 
 
 def get_mimic_layers(backbone_name, backbone_config):
