@@ -35,7 +35,7 @@ def check_if_valid_target(target, min_keypoints_per_image=10):
 
 
 def check_if_includes_ext(module):
-    return isinstance(module, BottleneckBase4Ext) and isinstance(module.Encoder, ExtEncoder)
+    return isinstance(module, BottleneckBase4Ext) and isinstance(module.encoder, ExtEncoder)
 
 
 class ExtIntermediateLayerGetter(nn.ModuleDict):
