@@ -16,7 +16,7 @@ class ExtEncoder(nn.Module):
         ext_z = self.ext_classifier(z)
         if not self.training and ext_z.shape[0] == 1 and ext_z[0][1] < self.threshold:
             return None, ext_z
-        return self.decoder(x), ext_z
+        return z, ext_z
 
     def get_ext_classifier(self):
         return self.ext_classifier
