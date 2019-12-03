@@ -33,7 +33,7 @@ def summarize_file_sizes(file_sizes, title):
 
 def analyze_file_size(dataset_config, split_name='test'):
     print('Analyzing {} file size'.format(split_name))
-    split_config = dataset_config[split_name]
+    split_config = dataset_config['splits'][split_name]
     dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], None,
                                  split_config['remove_non_annotated_imgs'], split_config['jpeg_quality'])
 
