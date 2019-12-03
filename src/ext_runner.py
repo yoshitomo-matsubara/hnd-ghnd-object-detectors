@@ -180,7 +180,7 @@ def main(args):
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
-        load_ckpt(ckpt_file_path, model=model.backbone.body.ext_classifier)
+        load_ckpt(ckpt_file_path, model=model.backbone.body.get_ext_classifier())
     evaluate(model, test_data_loader, device=device, min_recall=args.min_recall, split_name='Test')
 
 
