@@ -14,10 +14,10 @@ class BaseExtClassifier(nn.Module):
 
 
 class Ext4ResNet(BaseExtClassifier):
-    def __init__(self, resnet):
+    def __init__(self, inplanes):
         super().__init__(ext_idx=0)
         # inplanes = 512 for ResNets-18 and -34, and 2048 for all the other ResNets
-        input_channel = resnet.inplanes // 8
+        input_channel = inplanes // 8
         self.extractor = nn.Sequential(
             nn.AdaptiveAvgPool2d((64, 64)),
             nn.Conv2d(input_channel, input_channel // 4, kernel_size=4, stride=2),

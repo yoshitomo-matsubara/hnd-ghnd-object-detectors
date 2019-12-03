@@ -23,10 +23,13 @@ dataset:
 model:
     name: &model_name 'keypoint_rcnn'
     backbone:
-        name: &backbone_name 'resnet50'
+        name: &backbone_name 'custom_resnet50'
         params:
             pretrained: True
             freeze_layers: True
+            layer1:
+                name: 'Bottleneck4LargeResNet'
+                bottleneck_channel: 3
         ext_config:
             backbone_frozen: True
             threshold: 0.5

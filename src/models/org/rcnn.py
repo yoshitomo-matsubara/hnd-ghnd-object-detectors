@@ -95,6 +95,7 @@ class CustomRCNN(nn.Module):
     def forward(self, images, targets=None, fixed_sizes=None):
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
+
         original_image_sizes = [img.shape[-2:] for img in images]
         images, targets = self.transform(images, targets, fixed_sizes)
         features = self.backbone(images.tensors)
@@ -376,12 +377,12 @@ MODEL_CLASS_DICT = {
 }
 
 
-def get_base_backbone(backbone_name, backbone_params_config):
-    pretrained = backbone_params_config['pretrained']
+def get_base_backbone(backbone_name, backbone_config):
+    pretrained = backbone_config['params']['pretrained']
     if backbone_name.startswith('resne') or backbone_name.startswith('wide_resne'):
         return resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
     elif backbone_name.startswith('custom_resne') or backbone_name.startswith('custom_wide_resne'):
-        layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_params_config)
+        layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_config)
         return custom.resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d,
                                                      layer1=layer1, layer2=layer2, layer3=layer3, layer4=layer4)
     raise ValueError('backbone_name `{}` is not expected'.format(backbone_name))
@@ -419,7 +420,7 @@ def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
         backbone_params_config['pretrained'] = False
 
     if custom_backbone is None:
-        base_backbone = get_base_backbone(backbone_name, backbone_params_config)
+        base_backbone = get_base_backbone(backbone_name, backbone_config)
         ext_config = backbone_config.get('ext_config', None)
         freeze_layers = backbone_params_config['freeze_layers']
         if ext_config is not None:

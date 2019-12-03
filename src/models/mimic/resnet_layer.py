@@ -1,10 +1,12 @@
 from torch import nn
 
+from models.ext.classifier import Ext4ResNet
+from models.mimic.base import BottleneckBase4Ext, ExtDecoder
 
-class Bottleneck4SmallResNet(nn.Module):
-    def __init__(self, bottleneck_channel):
-        super().__init__()
-        self.encoder = nn.Sequential(
+
+class Bottleneck4SmallResNet(BottleneckBase4Ext):
+    def __init__(self, bottleneck_channel, ext_config):
+        encoder = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.Conv2d(64, 256, kernel_size=2, padding=1, bias=False),
@@ -14,7 +16,7 @@ class Bottleneck4SmallResNet(nn.Module):
             nn.BatchNorm2d(64),
             nn.Conv2d(64, bottleneck_channel, kernel_size=2, padding=1, bias=False)
         )
-        self.decoder = nn.Sequential(
+        decoder = nn.Sequential(
             nn.BatchNorm2d(bottleneck_channel),
             nn.ReLU(inplace=True),
             nn.Conv2d(bottleneck_channel, 64, kernel_size=2, bias=False),
@@ -28,16 +30,18 @@ class Bottleneck4SmallResNet(nn.Module):
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
         )
+        if ext_config is not None:
+            decoder = ExtDecoder(Ext4ResNet(inplanes=512), decoder)
+        super().__init__(encoder=encoder, decoder=decoder)
 
-    def forward(self, x):
-        z = self.encoder(x)
-        return self.decoder(z)
+    def get_ext_classifier(self):
+        return self.decoder.get_ext_classifier()
 
 
-class Bottleneck4LargeResNet(nn.Module):
-    def __init__(self, bottleneck_channel):
+class Bottleneck4LargeResNet(BottleneckBase4Ext):
+    def __init__(self, bottleneck_channel, ext_config):
         super().__init__()
-        self.encoder = nn.Sequential(
+        encoder = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.Conv2d(64, 256, kernel_size=2, padding=1, bias=False),
@@ -47,7 +51,7 @@ class Bottleneck4LargeResNet(nn.Module):
             nn.BatchNorm2d(64),
             nn.Conv2d(64, bottleneck_channel, kernel_size=2, padding=1, bias=False)
         )
-        self.decoder = nn.Sequential(
+        decoder = nn.Sequential(
             nn.BatchNorm2d(bottleneck_channel),
             nn.ReLU(inplace=True),
             nn.Conv2d(bottleneck_channel, 64, kernel_size=2, bias=False),
@@ -61,21 +65,26 @@ class Bottleneck4LargeResNet(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True)
         )
+        if ext_config is not None:
+            decoder = ExtDecoder(Ext4ResNet(inplanes=2048), decoder)
+        super().__init__(encoder=encoder, decoder=decoder)
 
-    def forward(self, x):
-        z = self.encoder(x)
-        return self.decoder(z)
+    def get_ext_classifier(self):
+        return self.decoder.get_ext_classifier()
 
 
-def get_mimic_layers(backbone_name, backbone_params_config):
+def get_mimic_layers(backbone_name, backbone_config):
     layer1, layer2, layer3, layer4 = None, None, None, None
+    backbone_params_config = backbone_config['params']
     layer1_config = backbone_params_config.get('layer1', None)
     if layer1_config is not None:
         layer1_name = layer1_config['name']
+        ext_config = backbone_config.get('ext_config', None)
         if layer1_name == 'Bottleneck4SmallResNet' and backbone_name in {'custom_resnet18', 'custom_resnet34'}:
-            layer1 = Bottleneck4LargeResNet(layer1_config['bottleneck_channel'])
+            layer1 = Bottleneck4LargeResNet(layer1_config['bottleneck_channel'], ext_config)
         elif layer1_name == 'Bottleneck4LargeResNet'\
                 and backbone_name in {'custom_resnet50', 'custom_resnet101', 'custom_resnet152'}:
-            layer1 = Bottleneck4LargeResNet(layer1_config['bottleneck_channel'])
+            layer1 = Bottleneck4LargeResNet(layer1_config['bottleneck_channel'], ext_config)
+        else:
+            raise ValueError('layer1_name `{}` is not expected'.format(layer1_name))
     return layer1, layer2, layer3, layer4
-

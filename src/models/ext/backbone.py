@@ -4,7 +4,7 @@ from torch import nn
 from torch.jit.annotations import Dict
 from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork, LastLevelMaxPool
 
-from models.ext.classifier import get_ext_classifier
+from models.mimic.base import BottleneckBase4Ext, ExtDecoder
 from myutils.pytorch import module_util
 
 
@@ -34,6 +34,10 @@ def check_if_valid_target(target, min_keypoints_per_image=10):
     return False
 
 
+def check_if_includes_ext(module):
+    return isinstance(module, BottleneckBase4Ext) and isinstance(module.decoder, ExtDecoder)
+
+
 class ExtIntermediateLayerGetter(nn.ModuleDict):
     _version = 2
     __constants__ = ['layers']
@@ -57,13 +61,18 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
 
         super().__init__(layers)
         self.return_layers = orig_return_layers
-        self.ext_classifier = get_ext_classifier(model)
-        self.ext_layer_name = list(self.return_layers.keys())[self.ext_classifier.ext_idx]
+        # self.ext_classifier = get_ext_classifier(model)
         self.threshold = ext_config['threshold']
+
+    def get_ext_classifier(self):
+        for _, module in self.items():
+            if check_if_includes_ext(module):
+                return module.get_ext_classifier()
+        return None
 
     def forward(self, x):
         out = OrderedDict()
-        z = None
+        ext_x = None
         for name, module in self.items():
             if 'ext_classifier' in name:
                 continue
@@ -72,13 +81,12 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
             if name in self.return_layers:
                 out_name = self.return_layers[name]
                 out[out_name] = x
-                if name == self.ext_layer_name:
-                    z = self.ext_classifier(x)
-                    if not self.training and z.shape[0] == 1 and z[0][1] < self.threshold:
-                        return None, z
-                    elif self.training:
-                        return out, z
-        return out, z
+                if check_if_includes_ext(module):
+                    x, ext_x = x
+                    out[out_name] = x
+                    if x is None:
+                        return None, ext_x
+        return out, ext_x
 
 
 class ExtBackboneWithFPN(nn.Module):
