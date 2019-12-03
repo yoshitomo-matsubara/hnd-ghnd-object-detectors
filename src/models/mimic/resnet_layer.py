@@ -1,7 +1,7 @@
 from torch import nn
 
 from models.ext.classifier import Ext4ResNet
-from models.mimic.base import BottleneckBase4Ext, ExtDecoder
+from models.mimic.base import BottleneckBase4Ext, ExtEncoder
 
 
 class Bottleneck4SmallResNet(BottleneckBase4Ext):
@@ -31,7 +31,7 @@ class Bottleneck4SmallResNet(BottleneckBase4Ext):
             nn.ReLU(inplace=True)
         )
         if ext_config is not None:
-            decoder = ExtDecoder(Ext4ResNet(inplanes=512), decoder)
+            encoder = ExtEncoder(encoder, Ext4ResNet(inplanes=512), ext_config['threshold'])
         super().__init__(encoder=encoder, decoder=decoder)
 
     def get_ext_classifier(self):
@@ -66,7 +66,7 @@ class Bottleneck4LargeResNet(BottleneckBase4Ext):
             nn.ReLU(inplace=True)
         )
         if ext_config is not None:
-            decoder = ExtDecoder(Ext4ResNet(inplanes=2048), decoder)
+            encoder = ExtEncoder(encoder, Ext4ResNet(inplanes=2048), ext_config['threshold'])
         super().__init__(encoder=encoder, decoder=decoder)
 
     def get_ext_classifier(self):

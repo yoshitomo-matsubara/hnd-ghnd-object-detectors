@@ -1,18 +1,19 @@
 from torch import nn
 
 
-class ExtDecoder(nn.Module):
-    def __init__(self, ext_classifier, decoder, threshold):
+class ExtEncoder(nn.Module):
+    def __init__(self, encoder, ext_classifier, threshold):
         super().__init__()
+        self.encoder = encoder
         self.ext_classifier = ext_classifier
-        self.decoder = decoder
         self.threshold = threshold
 
     def forward(self, x):
+        z = self.encoder(x)
         if self.ext_classifier is None:
-            return self.decoder(x)
+            return z
 
-        ext_z = self.ext_classifier(x)
+        ext_z = self.ext_classifier(z)
         if not self.training and ext_z.shape[0] == 1 and ext_z[0][1] < self.threshold:
             return None, ext_z
         return self.decoder(x), ext_z
@@ -27,10 +28,21 @@ class BottleneckBase4Ext(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.transformer = transformer
+        self.uses_ext_encoder = isinstance(encoder, ExtEncoder)
+
+    def forward_ext(self, z):
+        z, ext_z = z
+        if z is None:
+            return z, ext_z
+        elif self.transformer is not None:
+            z = self.transformer(z)
+        return self.decoder(z), ext_z
 
     def forward(self, x):
         z = self.encoder(x)
-        if self.transformer is not None:
+        if self.uses_ext_encoder:
+            return self.forward_ext(z)
+        elif self.transformer is not None:
             z = self.transformer(z)
         return self.decoder(z)
 

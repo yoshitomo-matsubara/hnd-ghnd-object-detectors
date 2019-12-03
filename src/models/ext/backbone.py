@@ -4,7 +4,7 @@ from torch import nn
 from torch.jit.annotations import Dict
 from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork, LastLevelMaxPool
 
-from models.mimic.base import BottleneckBase4Ext, ExtDecoder
+from models.mimic.base import BottleneckBase4Ext, ExtEncoder
 from myutils.pytorch import module_util
 
 
@@ -35,7 +35,7 @@ def check_if_valid_target(target, min_keypoints_per_image=10):
 
 
 def check_if_includes_ext(module):
-    return isinstance(module, BottleneckBase4Ext) and isinstance(module.decoder, ExtDecoder)
+    return isinstance(module, BottleneckBase4Ext) and isinstance(module.Encoder, ExtEncoder)
 
 
 class ExtIntermediateLayerGetter(nn.ModuleDict):
