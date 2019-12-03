@@ -5,32 +5,23 @@ from structure.transformer import ToTensor, RandomHorizontalFlip, Compose
 from utils import misc_util
 from utils.coco_util import get_coco
 
-ATTRIBUTE_DICT = {'coco_bbox': (91, 'instances'), 'coco_kp': (2, 'person_keypoints')}
 
-
-def get_coco_dataset(task_name, root_dir_path, split_dict, is_train):
+def get_coco_dataset(split_dict, is_train):
     transforms = [ToTensor()]
     if is_train:
         transforms.append(RandomHorizontalFlip(0.5))
-
-    if task_name not in ATTRIBUTE_DICT:
-        raise KeyError('task_name `{}` is not expected'.format(task_name))
-
-    num_classes, mode = ATTRIBUTE_DICT[task_name]
-    dataset = get_coco(root_dir_path, split_name=split_dict['name'], transforms=Compose(transforms), mode=mode,
-                       remove_non_annotated_imgs=split_dict['remove_non_annotated_imgs'])
-    return dataset, num_classes
+    return get_coco(img_dir_path=split_dict['images'], ann_file_path=split_dict['annotations'],
+                    transforms=Compose(transforms), remove_non_annotated_imgs=split_dict['remove_non_annotated_imgs'],
+                    jpeg_quality=split_dict['jpeg_quality'])
 
 
 def get_coco_data_loaders(dataset_config, batch_size, distributed):
-    task_name = dataset_config['task_name']
-    root_dir_path = dataset_config['root']
     num_workers = dataset_config['num_workers']
     aspect_ratio_group_factor = dataset_config['aspect_ratio_group_factor']
     dataset_splits = dataset_config['splits']
-    train_dataset, num_classes = get_coco_dataset(task_name, root_dir_path, dataset_splits['train'], True)
-    val_dataset, _ = get_coco_dataset(task_name, root_dir_path, dataset_splits['val'], False)
-    test_dataset, _ = get_coco_dataset(task_name, root_dir_path, dataset_splits['test'], False)
+    train_dataset = get_coco_dataset(dataset_splits['train'], True)
+    val_dataset = get_coco_dataset(dataset_splits['val'], False)
+    test_dataset = get_coco_dataset(dataset_splits['test'], False)
 
     print('Creating data loaders')
     if distributed:

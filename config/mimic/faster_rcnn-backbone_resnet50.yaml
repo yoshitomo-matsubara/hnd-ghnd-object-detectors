@@ -1,19 +1,24 @@
 dataset:
     name: &dataset_name 'coco2017'
-    task_name: 'coco_bbox'
-    root: !join ['./resource/dataset/', *dataset_name, '/']
+    root: &root_dir !join ['./resource/dataset/', *dataset_name]
     num_workers: 4
     aspect_ratio_group_factor: 3
     splits:
         train:
-            name: 'train'
+            images: !join [*root_dir, '/train2017']
+            annotations: !join [*root_dir, '/annotations/instances_train2017.json']
             remove_non_annotated_imgs: True
+            jpeg_quality:
         val:
-            name: 'val'
+            images: !join [*root_dir, '/val2017']
+            annotations: !join [*root_dir, '/annotations/instances_val2017.json']
             remove_non_annotated_imgs: False
+            jpeg_quality:
         test:
-            name: 'val'
+            images: !join [*root_dir, '/val2017']
+            annotations: !join [*root_dir, '/annotations/instances_val2017.json']
             remove_non_annotated_imgs: False
+            jpeg_quality:
 
 teacher_model:
     name: &teacher_model_name 'faster_rcnn'
@@ -36,7 +41,7 @@ student_model:
             pretrained: True
             freeze_layers: False
             layer1:
-                name: 'Bottleneck4ResNet50'
+                name: 'Bottleneck4LargeResNet'
                 bottleneck_channel: 3
     params:
         num_classes: 91
@@ -90,7 +95,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [10, 15]
+            milestones: [5, 15]
             gamma: 0.1
 
 test:

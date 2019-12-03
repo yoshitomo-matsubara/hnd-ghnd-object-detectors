@@ -123,7 +123,7 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
 def train(model, train_sampler, train_data_loader, val_data_loader, device, distributed, config, args, ckpt_file_path):
     train_config = config['train']
     optim_config = train_config['optimizer']
-    ext_classifier = model.backbone.body.ext_classifier
+    ext_classifier = model.backbone.body.get_ext_classifier()
     optimizer = func_util.get_optimizer(ext_classifier, optim_config['type'], optim_config['params'])
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
@@ -165,7 +165,7 @@ def main(args):
     model_config = config['model']
     model = get_model(model_config, device, strict=False)
     module_util.freeze_module_params(model)
-    module_util.unfreeze_module_params(model.backbone.body.ext_classifier)
+    module_util.unfreeze_module_params(model.backbone.body.get_ext_classifier())
     print('Updatable parameters: {}'.format(module_util.get_updatable_param_names(model)))
     model.ext_training = True
     if distributed:
@@ -180,7 +180,7 @@ def main(args):
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
-        load_ckpt(ckpt_file_path, model=model.backbone.body.ext_classifier)
+        load_ckpt(ckpt_file_path, model=model.backbone.body.get_ext_classifier())
     evaluate(model, test_data_loader, device=device, min_recall=args.min_recall, split_name='Test')
 
 

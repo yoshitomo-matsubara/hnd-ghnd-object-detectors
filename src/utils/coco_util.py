@@ -1,9 +1,11 @@
 import copy
 import os
+from io import BytesIO
 
 import torch
 import torch.utils.data
 import torchvision
+from PIL import Image
 from pycocotools import mask as coco_mask
 from pycocotools.coco import COCO
 
@@ -205,37 +207,41 @@ def get_coco_api_from_dataset(dataset):
     return convert_to_coco_api(dataset)
 
 
-class CocoDetection(torchvision.datasets.CocoDetection):
-    def __init__(self, img_folder, ann_file, transforms):
-        super(CocoDetection, self).__init__(img_folder, ann_file)
-        self._transforms = transforms
+class ExtCocoDetection(torchvision.datasets.CocoDetection):
+    def __init__(self, img_folder, ann_file, transforms, jpeg_quality):
+        super().__init__(img_folder, ann_file)
+        self.additional_transforms = transforms
+        self.jpeg_quality = jpeg_quality if jpeg_quality is not None and 1 <= jpeg_quality <= 95 else None
 
-    def __getitem__(self, idx):
-        img, target = super(CocoDetection, self).__getitem__(idx)
-        image_id = self.ids[idx]
+    def __getitem__(self, index):
+        coco = self.coco
+        img_id = self.ids[index]
+        ann_ids = coco.getAnnIds(imgIds=img_id)
+        target = coco.loadAnns(ann_ids)
+        path = coco.loadImgs(img_id)[0]['file_name']
+        img = Image.open(os.path.join(self.root, path)).convert('RGB')
+        if self.jpeg_quality is not None:
+            img_buffer = BytesIO()
+            img.save(img_buffer, 'JPEG', quality=self.jpeg_quality)
+            img = Image.open(img_buffer)
+
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+
+        image_id = self.ids[index]
         target = dict(image_id=image_id, annotations=target)
-        if self._transforms is not None:
-            img, target = self._transforms(img, target)
+        if self.additional_transforms is not None:
+            img, target = self.additional_transforms(img, target)
         return img, target
 
 
-def get_coco(root_dir_path, split_name, transforms, mode, remove_non_annotated_imgs):
-    anno_file_template = '{}_{}2017.json'
-    PATHS = {
-        'train': ('train2017', os.path.join('annotations', anno_file_template.format(mode, 'train'))),
-        'val': ('val2017', os.path.join('annotations', anno_file_template.format(mode, 'val')))
-    }
+def get_coco(img_dir_path, ann_file_path, transforms, remove_non_annotated_imgs, jpeg_quality=None):
     t = [ConvertCocoPolysToMask()]
     if transforms is not None:
         t.append(transforms)
 
     transforms = Compose(t)
-
-    img_folder, ann_file = PATHS[split_name]
-    img_folder = os.path.join(root_dir_path, img_folder)
-    ann_file = os.path.join(root_dir_path, ann_file)
-    dataset = CocoDetection(img_folder, ann_file, transforms=transforms)
-
+    dataset = ExtCocoDetection(img_dir_path, ann_file_path, transforms=transforms, jpeg_quality=jpeg_quality)
     if remove_non_annotated_imgs:
         dataset = remove_images_without_annotations(dataset)
     return dataset
