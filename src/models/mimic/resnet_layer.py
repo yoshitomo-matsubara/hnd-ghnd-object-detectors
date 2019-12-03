@@ -40,7 +40,6 @@ class Bottleneck4SmallResNet(BottleneckBase4Ext):
 
 class Bottleneck4LargeResNet(BottleneckBase4Ext):
     def __init__(self, bottleneck_channel, ext_config):
-        super().__init__()
         encoder = nn.Sequential(
             nn.Conv2d(64, 64, kernel_size=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
