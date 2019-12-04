@@ -92,6 +92,13 @@ class CustomRCNN(nn.Module):
         self.ext_training = False
         self.distill_backbone_only = False
 
+    def train_ext(self):
+        self.ext_training = True
+        self.backbone.body.ext_training = True
+
+    def get_ext_classifier(self):
+        return self.backbone.body.get_ext_classifier()
+
     def forward(self, images, targets=None, fixed_sizes=None):
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
