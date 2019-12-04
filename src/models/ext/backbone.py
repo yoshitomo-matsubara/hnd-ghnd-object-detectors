@@ -104,7 +104,7 @@ class ExtBackboneWithFPN(nn.Module):
 
     def forward(self, x):
         z, ext_z = self.body(x)
-        if self.body.ext_training or (not self.training and z is None):
+        if (not self.training and z is None) or self.body.ext_training:
             return None, ext_z
         elif self.training:
             return z, ext_z
