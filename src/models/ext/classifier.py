@@ -18,16 +18,14 @@ class Ext4ResNet(BaseExtClassifier):
         super().__init__(ext_idx=0)
         self.extractor = nn.Sequential(
             nn.AdaptiveAvgPool2d((64, 64)),
-            nn.Conv2d(bottleneck_channel, 32, kernel_size=4, stride=2),
+            nn.Conv2d(bottleneck_channel, 64, kernel_size=4, stride=2),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 32, kernel_size=4, stride=2),
             nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((16, 16)),
-            nn.Conv2d(32, 16, kernel_size=4, stride=2),
-            nn.BatchNorm2d(16),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool2d((4, 4))
         )
-        self.linear = nn.Linear(16 * 4 * 4, 2)
+        self.linear = nn.Linear(32 * 4 * 4, 2)
 
     def forward(self, x):
         z = self.extractor(x)
