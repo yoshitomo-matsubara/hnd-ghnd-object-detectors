@@ -31,7 +31,7 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None, str
     if lr_scheduler is not None:
         print('Loading scheduler parameters')
         lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
-    return ckpt['best_value'], ckpt['config'], ckpt['args']
+    return ckpt.get('best_value', 0.0), ckpt['config'], ckpt['args']
 
 
 def get_model(model_config, device, strict=True):
