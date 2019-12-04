@@ -108,6 +108,7 @@ class CustomResNet(nn.Module):
 def _custom_resnet(arch, block, layers, pretrained, progress, strict=False, **kwargs):
     model = CustomResNet(block, layers, **kwargs)
     if pretrained:
+        print('Loading pretrained state dict of {}'.format(arch))
         state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict, strict=strict)
     return model
