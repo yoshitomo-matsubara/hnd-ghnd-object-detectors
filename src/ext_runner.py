@@ -127,10 +127,11 @@ def train(model, ext_classifier, train_sampler, train_data_loader, val_data_load
     optimizer = func_util.get_optimizer(ext_classifier, optim_config['type'], optim_config['params'])
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
-    if file_util.check_if_exists(ckpt_file_path):
-        load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
-
     best_val_roc_auc = 0.0
+    if file_util.check_if_exists(ckpt_file_path):
+        best_val_roc_auc, _, _ =\
+            load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
+
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
     for epoch in range(num_epochs):
@@ -145,7 +146,7 @@ def train(model, ext_classifier, train_sampler, train_data_loader, val_data_load
         if val_roc_auc > best_val_roc_auc:
             print('Updating ckpt (Best ROC-AUC: {:.4f} -> {:.4f})'.format(best_val_roc_auc, val_roc_auc))
             best_val_roc_auc = val_roc_auc
-            save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
+            save_ckpt(ext_classifier, optimizer, lr_scheduler, best_val_roc_auc, config, args, ckpt_file_path)
 
 
 def main(args):

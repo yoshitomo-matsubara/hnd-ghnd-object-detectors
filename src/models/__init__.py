@@ -7,11 +7,11 @@ from myutils.common import file_util
 from utils import misc_util
 
 
-def save_ckpt(model, optimizer, lr_scheduler, config, args, output_file_path):
+def save_ckpt(model, optimizer, lr_scheduler, best_value, config, args, output_file_path):
     file_util.make_parent_dirs(output_file_path)
     model_state_dict =\
         model.module.state_dict() if isinstance(model, nn.parallel.DistributedDataParallel) else model.state_dict()
-    misc_util.save_on_master({'model': model_state_dict, 'optimizer': optimizer.state_dict(),
+    misc_util.save_on_master({'model': model_state_dict, 'optimizer': optimizer.state_dict(), 'best_value': best_value,
                               'lr_scheduler': lr_scheduler.state_dict(), 'config': config, 'args': args},
                              output_file_path)
 
@@ -31,7 +31,7 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None, str
     if lr_scheduler is not None:
         print('Loading scheduler parameters')
         lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
-    return ckpt.get('config', None), ckpt.get('args', None)
+    return ckpt['best_value'], ckpt['config'], ckpt['args']
 
 
 def get_model(model_config, device, strict=True):
