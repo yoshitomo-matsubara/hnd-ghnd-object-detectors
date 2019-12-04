@@ -27,7 +27,7 @@ def get_argparser():
 def summarize_file_sizes(file_sizes, title):
     file_sizes = np.array(file_sizes)
     print('[{}]'.format(title))
-    print('File size:\t{:.4f} +- {:.4f} [KB]'.format(file_sizes.mean(), file_sizes.std()))
+    print('File size:\t{:.4f} ± {:.4f} [KB]'.format(file_sizes.mean(), file_sizes.std()))
     print('# Files:\t{}\n'.format(len(file_sizes)))
 
 
