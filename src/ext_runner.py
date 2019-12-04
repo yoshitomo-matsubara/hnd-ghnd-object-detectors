@@ -120,10 +120,10 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     return roc_auc
 
 
-def train(model, train_sampler, train_data_loader, val_data_loader, device, distributed, config, args, ckpt_file_path):
+def train(model, ext_classifier, train_sampler, train_data_loader, val_data_loader, device, distributed,
+          config, args, ckpt_file_path):
     train_config = config['train']
     optim_config = train_config['optimizer']
-    ext_classifier = model.get_ext_classifier()
     optimizer = func_util.get_optimizer(ext_classifier, optim_config['type'], optim_config['params'])
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
@@ -176,7 +176,7 @@ def main(args):
         print('Start training')
         start_time = time.time()
         ckpt_file_path = model_config['backbone']['ext_config']['ckpt']
-        train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
+        train(model, ext_classifier, train_sampler, train_data_loader, val_data_loader, device, distributed,
               config, args, ckpt_file_path)
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
