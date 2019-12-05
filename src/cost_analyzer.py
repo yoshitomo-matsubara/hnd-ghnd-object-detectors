@@ -70,6 +70,8 @@ def analyze_data_size(dataset_config, split_name='test'):
     org_data_size_list = list()
     comp_data_size_list = list()
     channel_list, height_list, width_list = list(), list(), list()
+    min_shape, max_shape = None, None
+    min_size, max_size = None, None
     for index in range(len(dataset.ids)):
         img_id = dataset.ids[index]
         path = coco.loadImgs(img_id)[0]['file_name']
@@ -90,7 +92,18 @@ def analyze_data_size(dataset_config, split_name='test'):
             comp_data_size_list.append(img_buffer.tell() / 1024)
             img_buffer.close()
 
+        tensor_size = np.prod(shape)
+        if min_size is None or tensor_size < min_size:
+            min_size = tensor_size
+            min_shape = [shape[0], shape[1], shape[2]]
+
+        if max_size is None or tensor_size > max_size:
+            max_size = tensor_size
+            max_shape = [shape[0], shape[1], shape[2]]
+
     summarize_data_sizes(org_data_size_list, 'Original')
+    print('Min tensor shape: {}'.format(min_shape))
+    print('Max tensor shape: {}'.format(max_shape))
     if len(comp_data_size_list) > 0:
         summarize_data_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
     summarize_tensor_shape(channel_list, height_list, width_list)
@@ -112,12 +125,24 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
 
     data_sizes, quantized_data_sizes, tensor_shapes = data_size_logger.get_data()
     channel_list, height_list, width_list = list(), list(), list()
+    min_shape, max_shape = None, None
+    min_size, max_size = None, None
     for channel, height, width in tensor_shapes:
         channel_list.append(channel)
         height_list.append(height)
         width_list.append(width)
+        tensor_size = channel * height * width
+        if min_size is None or tensor_size < min_size:
+            min_size = tensor_size
+            min_shape = [channel, height, width]
+
+        if max_size is None or tensor_size > max_size:
+            max_size = tensor_size
+            max_shape = [channel, height, width]
 
     summarize_data_sizes(data_sizes, 'Bottleneck')
+    print('Min tensor shape: {}'.format(min_shape))
+    print('Max tensor shape: {}'.format(max_shape))
     if quantized_data_sizes[0] is not None:
         summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
     summarize_tensor_shape(channel_list, height_list, width_list)
