@@ -113,7 +113,7 @@ def main(args):
 
     if args.bottleneck_size is not None:
         data_size_logger = DataSizeLogger()
-        model = get_model(config['model'], device, bottleneck_transformer=data_size_logger)
+        model = get_model(config['student_model'], device, bottleneck_transformer=data_size_logger)
         analyze_bottleneck_size(model, data_size_logger, config['dataset'], split_name=args.bottleneck_size)
 
 
