@@ -93,7 +93,8 @@ def analyze_bottleneck_size(model, data_size_logger, dataset_config, split_name=
 
     data_sizes, quantized_data_sizes = data_size_logger.get_data()
     summarize_data_sizes(data_sizes, 'Bottleneck')
-    summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
+    if quantized_data_sizes[0] is not None:
+        summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
 
 
 def main(args):

@@ -2,7 +2,9 @@ import random
 
 from torchvision.transforms import functional
 
-from utils import data_util
+from myutils.common import file_util
+from myutils.pytorch import tensor_util
+import torch
 
 
 def _flip_coco_person_keypoints(kps, width):
@@ -65,7 +67,9 @@ class DataSizeLogger(object):
         self.quantized_data_size_list.clear()
 
     def __call__(self, z):
-        data_size, quantized_data_size = data_util.compute_data_size(z, num_bits=self.num_bits4quant)
+        data_size = file_util.get_binary_object_size(z)
+        quantized_data_size = None if not isinstance(z, torch.Tensor)\
+            else file_util.get_binary_object_size(tensor_util.quantize_tensor(z, num_bits=self.num_bits4quant))
         self.data_size_list.append(data_size)
         self.quantized_data_size_list.append(quantized_data_size)
         return z
