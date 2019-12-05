@@ -23,27 +23,27 @@ class ExtEncoder(nn.Module):
 
 
 class BottleneckBase4Ext(nn.Module):
-    def __init__(self, encoder, decoder, transformer=None):
+    def __init__(self, encoder, decoder, bottleneck_transformer=None):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.transformer = transformer
+        self.bottleneck_transformer = bottleneck_transformer
         self.uses_ext_encoder = isinstance(encoder, ExtEncoder)
 
     def forward_ext(self, z):
         z, ext_z = z
         if z is None:
             return z, ext_z
-        elif self.transformer is not None:
-            z = self.transformer(z)
+        elif self.bottleneck_transformer is not None:
+            z = self.bottleneck_transformer(z)
         return self.decoder(z), ext_z
 
     def forward(self, x):
         z = self.encoder(x)
         if self.uses_ext_encoder:
             return self.forward_ext(z)
-        elif self.transformer is not None:
-            z = self.transformer(z)
+        elif self.bottleneck_transformer is not None:
+            z = self.bottleneck_transformer(z)
         return self.decoder(z)
 
     def get_ext_classifier(self):

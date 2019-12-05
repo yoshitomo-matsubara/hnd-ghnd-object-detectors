@@ -2,6 +2,8 @@ import random
 
 from torchvision.transforms import functional
 
+from utils import data_util
+
 
 def _flip_coco_person_keypoints(kps, width):
     flip_inds = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
@@ -47,3 +49,23 @@ class ToTensor(object):
     def __call__(self, image, target):
         image = functional.to_tensor(image)
         return image, target
+
+
+class DataSizeLogger(object):
+    def __init__(self, num_bits=8):
+        self.num_bits4quant = num_bits
+        self.data_size_list = list()
+        self.quantized_data_size_list = list()
+
+    def get_data(self):
+        return self.data_size_list.copy(), self.quantized_data_size_list.copy()
+
+    def clear(self):
+        self.data_size_list.clear()
+        self.quantized_data_size_list.clear()
+
+    def __call__(self, z):
+        data_size, quantized_data_size = data_util.compute_data_size(z, num_bits=self.num_bits4quant)
+        self.data_size_list.append(data_size)
+        self.quantized_data_size_list.append(quantized_data_size)
+        return z

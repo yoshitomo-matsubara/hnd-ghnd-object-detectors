@@ -10,6 +10,7 @@ from PIL import Image
 from models import get_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
+from structure.transformer import DataSizeLogger
 from utils import coco_util, main_util
 
 
@@ -18,10 +19,29 @@ def get_argparser():
     argparser.add_argument('--config', required=True, help='yaml config file')
     argparser.add_argument('--device', default='cuda', help='device')
     argparser.add_argument('--json', help='dictionary to overwrite config')
-    argparser.add_argument('--data_size', help='dataset split name to analyze data size')
     argparser.add_argument('-model_params', help='dictionary to overwrite config')
     argparser.add_argument('--modules', nargs='+', help='list of specific modules you want to count parameters')
+    argparser.add_argument('--data_size', help='dataset split name to analyze data size')
+    argparser.add_argument('--bottleneck_size', help='dataset split name to analyze size of bottleneck in model')
     return argparser
+
+
+def analyze_model_params(model, module_paths):
+    print('Analyzing model parameters')
+    print('[Whole model]')
+    print('# parameters: {}'.format(module_util.count_params(model)))
+    if module_paths is None or len(module_paths) == 0:
+        return
+
+    print('[Specified module(s)]')
+    modules = module_util.get_components(module_paths)
+    pair_list = list()
+    for module, module_path in zip(modules, module_paths):
+        pair_list.append([module_path, module_util.count_params(module)])
+
+    data_frame = pd.DataFrame(pair_list)
+    print('Total # parameters: {}'.format(data_frame[1].sum()))
+    print(data_frame)
 
 
 def summarize_data_sizes(data_sizes, title):
@@ -61,22 +81,19 @@ def analyze_data_size(dataset_config, split_name='test'):
         summarize_data_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
 
 
-def analyze_model_params(model, module_paths):
-    print('Analyzing model parameters')
-    print('[Whole model]')
-    print('# parameters: {}'.format(module_util.count_params(model)))
-    if module_paths is None or len(module_paths) == 0:
-        return
+def analyze_bottleneck_size(model, data_size_logger, dataset_config, split_name='test'):
+    print('Analyzing size of bottleneck in model for {} dataset'.format(split_name))
+    split_config = dataset_config['splits'][split_name]
+    dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], None,
+                                 split_config['remove_non_annotated_imgs'], split_config['jpeg_quality'])
+    data_loader = torch.utils.data.SequentialSampler(dataset)
+    with torch.no_grad():
+        for images, _ in data_loader:
+            model(images)
 
-    print('[Specified module(s)]')
-    modules = module_util.get_components(module_paths)
-    pair_list = list()
-    for module, module_path in zip(modules, module_paths):
-        pair_list.append([module_path, module_util.count_params(module)])
-
-    data_frame = pd.DataFrame(pair_list)
-    print('Total # parameters: {}'.format(data_frame[1].sum()))
-    print(data_frame)
+    data_sizes, quantized_data_sizes = data_size_logger.get_data()
+    summarize_data_sizes(data_sizes, 'Bottleneck')
+    summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
 
 
 def main(args):
@@ -86,13 +103,17 @@ def main(args):
 
     device = torch.device(args.device)
     print(args)
+    if args.model_params:
+        model = get_model(config['model'], device)
+        analyze_model_params(model, args.modules)
+
     if args.data_size is not None:
         analyze_data_size(config['dataset'], split_name=args.data_size)
 
-    if args.model_params:
-        model_config = config['model']
-        model = get_model(model_config, device)
-        analyze_model_params(model, args.modules)
+    if args.bottleneck_size is not None:
+        data_size_logger = DataSizeLogger()
+        model = get_model(config['model'], device, bottleneck_transformer=data_size_logger)
+        analyze_bottleneck_size(model, data_size_logger, config['dataset'], split_name=args.bottleneck_size)
 
 
 if __name__ == '__main__':

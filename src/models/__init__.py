@@ -34,13 +34,14 @@ def load_ckpt(ckpt_file_path, model=None, optimizer=None, lr_scheduler=None, str
     return ckpt.get('best_value', 0.0), ckpt['config'], ckpt['args']
 
 
-def get_model(model_config, device, strict=True):
+def get_model(model_config, device, strict=True, bottleneck_transformer=None):
     model_name = model_config['name']
     ckpt_file_path = model_config['ckpt']
     model_params_config = model_config['params']
     if model_name in rcnn.MODEL_CLASS_DICT:
         backbone_config = model_config['backbone']
-        model = rcnn.get_model(model_name, backbone_config=backbone_config, strict=strict, **model_params_config)
+        model = rcnn.get_model(model_name, backbone_config=backbone_config, strict=strict,
+                               bottleneck_transformer=bottleneck_transformer, **model_params_config)
         if 'ext_config' in backbone_config:
             ext_config = backbone_config['ext_config']
             load_ckpt(ext_config['ckpt'], model=model.backbone.body.get_ext_classifier())
