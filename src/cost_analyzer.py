@@ -11,6 +11,7 @@ from models import get_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
 from structure.transformer import DataSizeLogger
+from structure.transformer import Compose, ToTensor
 from utils import coco_util, main_util, misc_util
 
 
@@ -81,10 +82,10 @@ def analyze_data_size(dataset_config, split_name='test'):
         summarize_data_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
 
 
-def analyze_bottleneck_size(model, data_size_logger, dataset_config, split_name='test'):
+def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, split_name='test'):
     print('Analyzing size of bottleneck in model for {} dataset'.format(split_name))
     split_config = dataset_config['splits'][split_name]
-    dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], None,
+    dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], Compose([ToTensor()]),
                                  split_config['remove_non_annotated_imgs'], split_config['jpeg_quality'])
     sampler = torch.utils.data.SequentialSampler(dataset)
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=sampler, collate_fn=misc_util.collate_fn,
@@ -92,6 +93,7 @@ def analyze_bottleneck_size(model, data_size_logger, dataset_config, split_name=
     model.eval()
     with torch.no_grad():
         for images, _ in data_loader:
+            images = list(image.to(device) for image in images)
             model(images)
 
     data_sizes, quantized_data_sizes = data_size_logger.get_data()
@@ -117,7 +119,7 @@ def main(args):
     if args.bottleneck_size is not None:
         data_size_logger = DataSizeLogger()
         model = get_model(config['student_model'], device, bottleneck_transformer=data_size_logger)
-        analyze_bottleneck_size(model, data_size_logger, config['dataset'], split_name=args.bottleneck_size)
+        analyze_bottleneck_size(model, data_size_logger, device, config['dataset'], split_name=args.bottleneck_size)
 
 
 if __name__ == '__main__':
