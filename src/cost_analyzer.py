@@ -18,7 +18,7 @@ def get_argparser():
     argparser.add_argument('--config', required=True, help='yaml config file')
     argparser.add_argument('--device', default='cuda', help='device')
     argparser.add_argument('--json', help='dictionary to overwrite config')
-    argparser.add_argument('--file_size', help='dataset split name to analyze file size')
+    argparser.add_argument('--data_size', help='dataset split name to analyze data size')
     argparser.add_argument('-model_params', help='dictionary to overwrite config')
     argparser.add_argument('--modules', nargs='+', help='list of specific modules you want to count parameters')
     return argparser
@@ -31,34 +31,34 @@ def summarize_file_sizes(file_sizes, title):
     print('# Files:\t{}\n'.format(len(file_sizes)))
 
 
-def analyze_file_size(dataset_config, split_name='test'):
-    print('Analyzing {} file size'.format(split_name))
+def analyze_data_size(dataset_config, split_name='test'):
+    print('Analyzing {} data size'.format(split_name))
     split_config = dataset_config['splits'][split_name]
     dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], None,
                                  split_config['remove_non_annotated_imgs'], split_config['jpeg_quality'])
 
     coco = dataset.coco
-    org_file_size_list = list()
-    comp_file_size_list = list()
+    org_data_size_list = list()
+    comp_data_size_list = list()
     for index in range(len(dataset.ids)):
         img_id = dataset.ids[index]
         path = coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(dataset.root, path)).convert('RGB')
         img_buffer = BytesIO()
         img.save(img_buffer, 'JPEG', quality=95)
-        # Original file size [KB]
-        org_file_size_list.append(img_buffer.tell() / 1024)
+        # Original data size [KB]
+        org_data_size_list.append(img_buffer.tell() / 1024)
         img_buffer.close()
         if dataset.jpeg_quality is not None:
             img_buffer = BytesIO()
             img.save(img_buffer, 'JPEG', quality=dataset.jpeg_quality)
-            # JPEG-compressed file size [KB]
-            comp_file_size_list.append(img_buffer.tell() / 1024)
+            # JPEG-compressed data size [KB]
+            comp_data_size_list.append(img_buffer.tell() / 1024)
             img_buffer.close()
 
-    summarize_file_sizes(org_file_size_list, 'Original')
-    if len(comp_file_size_list) > 0:
-        summarize_file_sizes(comp_file_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
+    summarize_file_sizes(org_data_size_list, 'Original')
+    if len(comp_data_size_list) > 0:
+        summarize_file_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
 
 
 def analyze_model_params(model, module_paths):
@@ -86,8 +86,8 @@ def main(args):
 
     device = torch.device(args.device)
     print(args)
-    if args.file_size is not None:
-        analyze_file_size(config['dataset'], split_name=args.file_size)
+    if args.data_size is not None:
+        analyze_data_size(config['dataset'], split_name=args.data_size)
 
     if args.model_params:
         model_config = config['model']
