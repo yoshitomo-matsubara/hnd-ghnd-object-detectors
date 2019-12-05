@@ -14,11 +14,11 @@ class BaseExtClassifier(nn.Module):
 
 
 class Ext4ResNet(BaseExtClassifier):
-    def __init__(self, bottleneck_channel):
+    def __init__(self, input_channel):
         super().__init__(ext_idx=0)
         self.extractor = nn.Sequential(
             nn.AdaptiveAvgPool2d((64, 64)),
-            nn.Conv2d(bottleneck_channel, 64, kernel_size=4, stride=2),
+            nn.Conv2d(input_channel, 64, kernel_size=4, stride=2),
             nn.BatchNorm2d(64),
             nn.Conv2d(64, 32, kernel_size=4, stride=2),
             nn.BatchNorm2d(32),

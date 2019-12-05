@@ -9,13 +9,11 @@ class ExtEncoder(nn.Module):
         self.threshold = threshold
 
     def forward(self, x):
-        z = self.encoder(x)
-        if self.ext_classifier is None:
-            return z
-
-        ext_z = self.ext_classifier(z)
+        ext_z = self.ext_classifier(x)
         if not self.training and ext_z.shape[0] == 1 and ext_z[0][1] < self.threshold:
             return None, ext_z
+
+        z = self.encoder(x)
         return z, ext_z
 
     def get_ext_classifier(self):
