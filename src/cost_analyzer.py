@@ -89,6 +89,7 @@ def analyze_bottleneck_size(model, data_size_logger, dataset_config, split_name=
     sampler = torch.utils.data.SequentialSampler(dataset)
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=sampler, collate_fn=misc_util.collate_fn,
                                               num_workers=dataset_config['num_workers'])
+    model.eval()
     with torch.no_grad():
         for images, _ in data_loader:
             model(images)
