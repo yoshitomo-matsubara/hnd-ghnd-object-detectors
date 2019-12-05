@@ -11,7 +11,7 @@ from models import get_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
 from structure.transformer import DataSizeLogger
-from utils import coco_util, main_util
+from utils import coco_util, main_util, misc_util
 
 
 def get_argparser():
@@ -86,7 +86,9 @@ def analyze_bottleneck_size(model, data_size_logger, dataset_config, split_name=
     split_config = dataset_config['splits'][split_name]
     dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], None,
                                  split_config['remove_non_annotated_imgs'], split_config['jpeg_quality'])
-    data_loader = torch.utils.data.SequentialSampler(dataset)
+    sampler = torch.utils.data.SequentialSampler(dataset)
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=sampler, collate_fn=misc_util.collate_fn,
+                                              num_workers=dataset_config['num_workers'])
     with torch.no_grad():
         for images, _ in data_loader:
             model(images)
