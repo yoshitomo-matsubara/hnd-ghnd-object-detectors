@@ -74,5 +74,5 @@ class DataLogger(object):
             else file_util.get_binary_object_size(tensor_util.quantize_tensor(z, num_bits=self.num_bits4quant))
         self.data_size_list.append(data_size)
         self.quantized_data_size_list.append(quantized_data_size)
-        self.tensor_shape_list.append([z.shape[0], z.shape[1], z.shape[2]])
+        self.tensor_shape_list.append([z.shape[1], z.shape[2], z.shape[3]])
         return z

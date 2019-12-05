@@ -116,7 +116,7 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
         channel_list.append(channel)
         height_list.append(height)
         width_list.append(width)
-        
+
     summarize_data_sizes(data_sizes, 'Bottleneck')
     if quantized_data_sizes[0] is not None:
         summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
