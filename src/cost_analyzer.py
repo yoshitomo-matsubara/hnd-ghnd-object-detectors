@@ -13,6 +13,7 @@ from myutils.pytorch import module_util
 from structure.transformer import DataSizeLogger
 from structure.transformer import Compose, ToTensor
 from utils import coco_util, main_util, misc_util
+from torchvision.transforms import functional
 
 
 def get_argparser():
@@ -52,6 +53,14 @@ def summarize_data_sizes(data_sizes, title):
     print('# Files:\t{}\n'.format(len(data_sizes)))
 
 
+def summarize_tensor_shape(channels, heights, widths):
+    channels, heights, widths = np.array(channels), np.array(heights), np.array(widths)
+    print('Tensor shape')
+    print('Channel:\t{:.4f} ± {:.4f}'.format(channels.mean(), channels.std()))
+    print('Height:\t{:.4f} ± {:.4f}'.format(heights.mean(), heights.std()))
+    print('Width:\t{:.4f} ± {:.4f}'.format(widths.mean(), widths.std()))
+
+
 def analyze_data_size(dataset_config, split_name='test'):
     print('Analyzing {} data size'.format(split_name))
     split_config = dataset_config['splits'][split_name]
@@ -61,10 +70,15 @@ def analyze_data_size(dataset_config, split_name='test'):
     coco = dataset.coco
     org_data_size_list = list()
     comp_data_size_list = list()
+    channel_list, height_list, width_list = list(), list(), list()
     for index in range(len(dataset.ids)):
         img_id = dataset.ids[index]
         path = coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(dataset.root, path)).convert('RGB')
+        shape = functional.to_tensor(img).shape
+        channel_list.append(shape[0])
+        height_list.append(shape[1])
+        width_list.append(shape[2])
         img_buffer = BytesIO()
         img.save(img_buffer, 'JPEG', quality=95)
         # Original data size [KB]
@@ -80,6 +94,7 @@ def analyze_data_size(dataset_config, split_name='test'):
     summarize_data_sizes(org_data_size_list, 'Original')
     if len(comp_data_size_list) > 0:
         summarize_data_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
+    summarize_tensor_shape(channel_list, height_list, width_list)
 
 
 def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, split_name='test'):
@@ -91,15 +106,21 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=sampler, collate_fn=misc_util.collate_fn,
                                               num_workers=dataset_config['num_workers'])
     model.eval()
+    channel_list, height_list, width_list = list(), list(), list()
     with torch.no_grad():
         for images, _ in data_loader:
             images = list(image.to(device) for image in images)
+            for image in images:
+                channel_list.append(image.shape[0])
+                height_list.append(image.shape[1])
+                width_list.append(image.shape[2])
             model(images)
 
     data_sizes, quantized_data_sizes = data_size_logger.get_data()
     summarize_data_sizes(data_sizes, 'Bottleneck')
     if quantized_data_sizes[0] is not None:
         summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
+    summarize_tensor_shape(channel_list, height_list, width_list)
 
 
 def main(args):
