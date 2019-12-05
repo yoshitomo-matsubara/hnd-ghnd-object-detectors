@@ -24,11 +24,11 @@ def get_argparser():
     return argparser
 
 
-def summarize_file_sizes(file_sizes, title):
-    file_sizes = np.array(file_sizes)
+def summarize_data_sizes(data_sizes, title):
+    data_sizes = np.array(data_sizes)
     print('[{}]'.format(title))
-    print('File size:\t{:.4f} ± {:.4f} [KB]'.format(file_sizes.mean(), file_sizes.std()))
-    print('# Files:\t{}\n'.format(len(file_sizes)))
+    print('Data size:\t{:.4f} ± {:.4f} [KB]'.format(data_sizes.mean(), data_sizes.std()))
+    print('# Files:\t{}\n'.format(len(data_sizes)))
 
 
 def analyze_data_size(dataset_config, split_name='test'):
@@ -56,9 +56,9 @@ def analyze_data_size(dataset_config, split_name='test'):
             comp_data_size_list.append(img_buffer.tell() / 1024)
             img_buffer.close()
 
-    summarize_file_sizes(org_data_size_list, 'Original')
+    summarize_data_sizes(org_data_size_list, 'Original')
     if len(comp_data_size_list) > 0:
-        summarize_file_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
+        summarize_data_sizes(comp_data_size_list, 'JPEG quality = {}'.format(dataset.jpeg_quality))
 
 
 def analyze_model_params(model, module_paths):
