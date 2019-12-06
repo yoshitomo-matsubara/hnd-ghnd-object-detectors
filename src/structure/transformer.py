@@ -1,10 +1,13 @@
+import os
 import random
 
+import torch
+from PIL import Image
 from torchvision.transforms import functional
+from torchvision.utils import save_image
 
 from myutils.common import file_util
 from myutils.pytorch import tensor_util
-import torch
 
 
 def _flip_coco_person_keypoints(kps, width):
@@ -76,3 +79,36 @@ class DataLogger(object):
         self.quantized_data_size_list.append(quantized_data_size)
         self.tensor_shape_list.append([z.shape[1], z.shape[2], z.shape[3]])
         return z
+
+
+class JpegCompressor(object):
+    def __init__(self, jpeg_quality=95, tmp_dir_path='./tmp/'):
+        self.jpeg_quality = jpeg_quality
+        self.tmp_dir_path = tmp_dir_path
+        file_util.make_dirs(tmp_dir_path)
+
+    def __call__(self, z):
+        if (z.dim() == 3 and z.shape[0] == 3) or (z.dim() == 4 and len(z) == 1 and z.shape[1] == 3):
+            file_path = os.path.join(self.tmp_dir_path, '{}.jpg'.format(hash(z)))
+            qz = tensor_util.quantize_tensor(z)
+            save_image(qz.tensor.float(), file_path, normalize=True)
+            return file_path, qz
+        return z
+
+
+class JpegDecompressor(object):
+    def __init__(self, tmp_dir_path='./tmp/', target_dim=4):
+        self.tmp_dir_path = tmp_dir_path
+        self.target_dim = target_dim
+
+    def __call__(self, z):
+        if isinstance(z, tuple) and isinstance(z[0], str):
+            img = Image.open(z[0]).convert('RGB')
+            qz = z[1]
+            img = qz.scale * (functional.to_tensor(img) * 255.0 - qz.zero_point)
+            return img if self.target_dim != 4 else img.unsqueeze(0)
+        return z
+
+
+def get_jpeg_transformer(jpeg_quality=95):
+    return Compose([JpegCompressor(jpeg_quality), JpegDecompressor()])
