@@ -93,7 +93,10 @@ class JpegCompressor(object):
         return qz
 
     def __call__(self, z, target):
-        if (z.dim() == 3 and z.shape[0] == 3) or (z.dim() == 4 and z.shape[0] == 1 and z.shape[1] == 3):
+        if (z.dim() == 3 and z.shape[0] == 3) or (z.dim() == 4 and z.shape[0] == 1 and z.shape[1] == 3)
+            if z.dim() == 4:
+                z = z.squeeze(0)
+
             file_path = os.path.join(self.tmp_dir_path, '{}.jpg'.format(hash(z)))
             qz = self.save_image(z, file_path)
             return (file_path, qz), target
