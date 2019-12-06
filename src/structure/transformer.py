@@ -4,7 +4,6 @@ import random
 import torch
 from PIL import Image
 from torchvision.transforms import functional
-from torchvision.utils import save_image
 
 from myutils.common import file_util
 from myutils.pytorch import tensor_util
@@ -87,13 +86,18 @@ class JpegCompressor(object):
         self.tmp_dir_path = tmp_dir_path
         file_util.make_dirs(tmp_dir_path)
 
-    def __call__(self, z):
-        if (z.dim() == 3 and z.shape[0] == 3) or (z.dim() == 4 and len(z) == 1 and z.shape[1] == 3):
+    def save_image(self, z, output_file_path):
+        qz = tensor_util.quantize_tensor(z)
+        img = Image.fromarray(qz.tensor.cpu().numpy())
+        img.save(output_file_path, format=format)
+        return qz
+
+    def __call__(self, z, target):
+        if (z.dim() == 3 and z.shape[0] == 3) or (z.dim() == 4 and z.shape[0] == 1 and z.shape[1] == 3):
             file_path = os.path.join(self.tmp_dir_path, '{}.jpg'.format(hash(z)))
-            qz = tensor_util.quantize_tensor(z)
-            save_image(qz.tensor.float(), file_path, normalize=True)
-            return file_path, qz
-        return z
+            qz = self.save_image(z, file_path)
+            return (file_path, qz), target
+        return z, target
 
 
 class JpegDecompressor(object):
@@ -101,13 +105,13 @@ class JpegDecompressor(object):
         self.tmp_dir_path = tmp_dir_path
         self.target_dim = target_dim
 
-    def __call__(self, z):
+    def __call__(self, z, target):
         if isinstance(z, tuple) and isinstance(z[0], str):
             img = Image.open(z[0]).convert('RGB')
             qz = z[1]
             img = qz.scale * (functional.to_tensor(img) * 255.0 - qz.zero_point)
-            return img if self.target_dim != 4 else img.unsqueeze(0)
-        return z
+            return img if self.target_dim != 4 else img.unsqueeze(0), target
+        return z, target
 
 
 def get_jpeg_transformer(jpeg_quality=95):
