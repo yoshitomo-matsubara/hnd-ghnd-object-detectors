@@ -30,8 +30,7 @@ class Bottleneck4SmallResNet(BottleneckBase4Ext):
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
         )
-        if ext_config is not None:
-            encoder = ExtEncoder(encoder, Ext4ResNet(64), ext_config['threshold'])
+        encoder = ExtEncoder(encoder, Ext4ResNet(64) if ext_config is not None else None, ext_config)
         super().__init__(encoder=encoder, decoder=decoder, bottleneck_transformer=bottleneck_transformer)
 
     def get_ext_classifier(self):
@@ -64,8 +63,7 @@ class Bottleneck4LargeResNet(BottleneckBase4Ext):
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True)
         )
-        if ext_config is not None:
-            encoder = ExtEncoder(encoder, Ext4ResNet(64), ext_config['threshold'])
+        encoder = ExtEncoder(encoder, Ext4ResNet(64) if ext_config is not None else None, ext_config)
         super().__init__(encoder=encoder, decoder=decoder, bottleneck_transformer=bottleneck_transformer)
 
     def get_ext_classifier(self):

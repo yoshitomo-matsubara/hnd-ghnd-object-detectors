@@ -2,11 +2,11 @@ from torch import nn
 
 
 class ExtEncoder(nn.Module):
-    def __init__(self, encoder, ext_classifier, threshold):
+    def __init__(self, encoder, ext_classifier=None, ext_config=None):
         super().__init__()
         self.encoder = encoder
         self.ext_classifier = ext_classifier
-        self.threshold = threshold
+        self.threshold = ext_config['threshold'] if ext_config is not None else None
 
     def forward(self, x):
         ext_z = self.ext_classifier(x)
@@ -26,7 +26,7 @@ class BottleneckBase4Ext(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.bottleneck_transformer = bottleneck_transformer
-        self.uses_ext_encoder = isinstance(encoder, ExtEncoder)
+        self.uses_ext_encoder = isinstance(encoder, ExtEncoder) and encoder.ext_classifier is not None
 
     def forward_ext(self, z):
         z, ext_z = z
