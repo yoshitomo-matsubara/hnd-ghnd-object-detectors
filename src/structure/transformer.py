@@ -89,7 +89,7 @@ class JpegCompressor(object):
     def save_image(self, z, output_file_path):
         qz = tensor_util.quantize_tensor(z)
         img = Image.fromarray(qz.tensor.permute(1, 2, 0).cpu().numpy())
-        img.save(output_file_path, format='jpeg')
+        img.save(output_file_path, format='jpeg', quality=self.jpeg_quality)
         return qz
 
     def __call__(self, z, target):
