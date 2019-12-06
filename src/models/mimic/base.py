@@ -34,7 +34,8 @@ class BottleneckBase4Ext(nn.Module):
             return z, ext_z
         elif self.bottleneck_transformer is not None:
             device = z.device
-            z = self.bottleneck_transformer(z, target=None).to(device)
+            z, _ = self.bottleneck_transformer(z, target=None)
+            z = z.to(device)
         return self.decoder(z), ext_z
 
     def forward(self, x):
@@ -43,7 +44,8 @@ class BottleneckBase4Ext(nn.Module):
             return self.forward_ext(z)
         elif self.bottleneck_transformer is not None:
             device = z.device
-            z, _ = self.bottleneck_transformer(z, target=None).to(device)
+            z, _ = self.bottleneck_transformer(z, target=None)
+            z = z.to(device)
         return self.decoder(z)
 
     def get_ext_classifier(self):
