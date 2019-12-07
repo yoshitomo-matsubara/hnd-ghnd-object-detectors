@@ -43,6 +43,13 @@ student_model:
             layer1:
                 name: 'Bottleneck4LargeResNet'
                 bottleneck_channel: 3
+    bottleneck_transformer:
+        quantizer:
+            params:
+                num_bits: 8
+        dequantizer:
+            params:
+                num_bits: 8
     params:
         num_classes: 91
         pretrained: True
