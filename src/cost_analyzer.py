@@ -64,7 +64,7 @@ def summarize_tensor_shape(channels, heights, widths):
 
 
 def resize_for_rcnns(image, min_size=800, max_size=1333):
-    width, height = image.size()
+    width, height = image.size
     img_min_size = float(min(width, height))
     img_max_size = float(max(width, height))
     scale_factor = min_size / img_min_size
