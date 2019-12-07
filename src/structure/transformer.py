@@ -70,14 +70,14 @@ class DataLogger(object):
         self.quantized_data_size_list.clear()
         self.tensor_shape_list.clear()
 
-    def __call__(self, z):
+    def __call__(self, z, target):
         data_size = file_util.get_binary_object_size(z)
         quantized_data_size = None if not isinstance(z, torch.Tensor)\
             else file_util.get_binary_object_size(tensor_util.quantize_tensor(z, num_bits=self.num_bits4quant))
         self.data_size_list.append(data_size)
         self.quantized_data_size_list.append(quantized_data_size)
         self.tensor_shape_list.append([z.shape[1], z.shape[2], z.shape[3]])
-        return z
+        return z, target
 
 
 class JpegCompressor(object):
