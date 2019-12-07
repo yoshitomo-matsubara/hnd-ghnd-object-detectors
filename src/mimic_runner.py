@@ -15,6 +15,7 @@ def get_argparser():
     argparser.add_argument('--device', default='cuda', help='device')
     argparser.add_argument('--json', help='dictionary to overwrite config')
     argparser.add_argument('-distill', action='store_true', help='distill a teacher model')
+    argparser.add_argument('-skip_teacher_eval', action='store_true', help='skip teacher model evaluation in testing')
     # distributed training parameters
     argparser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
     argparser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -86,11 +87,13 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         lr_scheduler.step()
 
 
-def evaluate(teacher_model, student_model, test_data_loader, device):
+def evaluate(teacher_model, student_model, test_data_loader, device, student_only):
     teacher_model.distill_backbone_only = False
     student_model.distill_backbone_only = False
-    print('[Teacher model]')
-    main_util.evaluate(teacher_model, test_data_loader, device=device)
+    if not student_only:
+        print('[Teacher model]')
+        main_util.evaluate(teacher_model, test_data_loader, device=device)
+
     print('\n[Student model]')
     main_util.evaluate(student_model, test_data_loader, device=device)
 
@@ -115,7 +118,7 @@ def main(args):
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
                 device, distributed, distill_backbone_only, config, args)
         load_ckpt(config['student_model']['ckpt'], model=student_model)
-    evaluate(teacher_model, student_model, test_data_loader, device)
+    evaluate(teacher_model, student_model, test_data_loader, device, args.skip_teacher_eval)
 
 
 if __name__ == '__main__':
