@@ -70,7 +70,7 @@ def resize_for_rcnns(image, min_size=800, max_size=1333):
     scale_factor = min_size / img_min_size
     if img_max_size * scale_factor > max_size:
         scale_factor = max_size / img_max_size
-    return image.transform((int(width * scale_factor), int(height * scale_factor)), resample=Image.BILINEAR)
+    return image.resize((int(width * scale_factor), int(height * scale_factor)), resample=Image.BILINEAR)
 
 
 def analyze_data_size(dataset_config, split_name='test', resized=False):
