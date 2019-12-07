@@ -117,5 +117,45 @@ class JpegDecompressor(object):
         return z, target
 
 
-def get_jpeg_transformer(jpeg_quality=95):
-    return Compose([JpegCompressor(jpeg_quality), JpegDecompressor()])
+class Quantizer(object):
+    def __init__(self, num_bits=8):
+        self.num_bits = num_bits
+
+    def __call__(self, z, target):
+        if self.num_bits == 16:
+            return z.half(), target
+
+        qz = tensor_util.quantize_tensor(z, num_bits=self.num_bits)
+        return qz, target
+
+
+class Dequantizer(object):
+    def __init__(self, num_bits=8):
+        # num_bits should be the same as Quantizer
+        self.num_bits = num_bits
+
+    def __call__(self, qz, target):
+        if self.num_bits == 16:
+            return qz.float(), target
+
+        z = tensor_util.dequantize_tensor(qz)
+        return z, target
+
+
+TRANSFORMER_CLASS_DICT = {
+    'jpeg_compressor': JpegCompressor,
+    'jpeg_decompressor': JpegDecompressor,
+    'quantizer': Quantizer,
+    'dequantizer': Dequantizer
+}
+
+
+def get_bottleneck_transformer(transformer_config):
+    component_list = list()
+    for name, config in transformer_config.items():
+        if name not in TRANSFORMER_CLASS_DICT:
+            raise KeyError('transformer `{}` is not expected'.format(name))
+
+        obj_class = TRANSFORMER_CLASS_DICT[name]
+        component_list.append(obj_class(**config['params']))
+    return Compose(component_list) if len(component_list) > 0 else None

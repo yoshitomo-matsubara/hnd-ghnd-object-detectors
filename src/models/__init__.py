@@ -5,6 +5,7 @@ from torchvision.models import detection
 from models.org import rcnn
 from myutils.common import file_util
 from utils import misc_util
+from structure.transformer import get_bottleneck_transformer
 
 
 def save_ckpt(model, optimizer, lr_scheduler, best_value, config, args, output_file_path):
@@ -40,6 +41,9 @@ def get_model(model_config, device, strict=True, bottleneck_transformer=None):
     model_params_config = model_config['params']
     if model_name in rcnn.MODEL_CLASS_DICT:
         backbone_config = model_config['backbone']
+        if bottleneck_transformer is None and 'bottleneck_transformer' in model_config:
+            bottleneck_transformer = get_bottleneck_transformer(model_config['bottleneck_transformer'])
+
         model = rcnn.get_model(model_name, backbone_config=backbone_config, strict=strict,
                                bottleneck_transformer=bottleneck_transformer, **model_params_config)
         if 'ext_config' in backbone_config:
