@@ -24,7 +24,8 @@ def get_argparser():
     argparser.add_argument('-model_params', help='dictionary to overwrite config')
     argparser.add_argument('--modules', nargs='+', help='list of specific modules you want to count parameters')
     argparser.add_argument('--data_size', help='dataset split name to analyze data size')
-    argparser.add_argument('-resized', help='resize input image, following the preprocessing approach used in R-CNNs')
+    argparser.add_argument('-resized', action='store_true',
+                           help='resize input image, following the preprocessing approach used in R-CNNs')
     argparser.add_argument('--bottleneck_size', help='dataset split name to analyze size of bottleneck in model')
     return argparser
 
