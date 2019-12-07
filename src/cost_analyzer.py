@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
+from torchvision.transforms import functional
 
 from models import get_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
-from structure.transformer import DataLogger
 from structure.transformer import Compose, ToTensor
+from structure.transformer import DataLogger
 from utils import coco_util, main_util, misc_util
-from torchvision.transforms import functional
 
 
 def get_argparser():
@@ -24,6 +24,7 @@ def get_argparser():
     argparser.add_argument('-model_params', help='dictionary to overwrite config')
     argparser.add_argument('--modules', nargs='+', help='list of specific modules you want to count parameters')
     argparser.add_argument('--data_size', help='dataset split name to analyze data size')
+    argparser.add_argument('-resized', help='resize input image, following the preprocessing approach used in R-CNNs')
     argparser.add_argument('--bottleneck_size', help='dataset split name to analyze size of bottleneck in model')
     return argparser
 
@@ -61,7 +62,17 @@ def summarize_tensor_shape(channels, heights, widths):
     print('Width:\t{:.4f} ± {:.4f}'.format(widths.mean(), widths.std()))
 
 
-def analyze_data_size(dataset_config, split_name='test'):
+def resize_for_rcnns(image, min_size=800, max_size=1333):
+    width, height = image.size()
+    img_min_size = float(min(width, height))
+    img_max_size = float(max(width, height))
+    scale_factor = min_size / img_min_size
+    if img_max_size * scale_factor > max_size:
+        scale_factor = max_size / img_max_size
+    return image.transform((int(width * scale_factor), int(height * scale_factor)), resample=Image.BILINEAR)
+
+
+def analyze_data_size(dataset_config, split_name='test', resized=False):
     print('Analyzing {} data size'.format(split_name))
     split_config = dataset_config['splits'][split_name]
     dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], None,
@@ -160,7 +171,7 @@ def main(args):
         analyze_model_params(model, args.modules)
 
     if args.data_size is not None:
-        analyze_data_size(config['dataset'], split_name=args.data_size)
+        analyze_data_size(config['dataset'], split_name=args.data_size, resized=args.resized)
 
     if args.bottleneck_size is not None:
         data_logger = DataLogger()
