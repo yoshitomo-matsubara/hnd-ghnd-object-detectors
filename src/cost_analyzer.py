@@ -88,6 +88,9 @@ def analyze_data_size(dataset_config, split_name='test', resized=False):
         img_id = dataset.ids[index]
         path = coco.loadImgs(img_id)[0]['file_name']
         img = Image.open(os.path.join(dataset.root, path)).convert('RGB')
+        if resized:
+            img = resize_for_rcnns(img)
+
         shape = functional.to_tensor(img).shape
         channel_list.append(shape[0])
         height_list.append(shape[1])
