@@ -150,12 +150,13 @@ TRANSFORMER_CLASS_DICT = {
 }
 
 
-def get_bottleneck_transformer(transformer_config):
+def get_bottleneck_transformer(transformer_configs):
     component_list = list()
-    for name, config in transformer_config.items():
+    for transformer_config in transformer_configs:
+        name, param_config = transformer_config['type'], transformer_config['params']
         if name not in TRANSFORMER_CLASS_DICT:
             raise KeyError('transformer `{}` is not expected'.format(name))
 
         obj_class = TRANSFORMER_CLASS_DICT[name]
-        component_list.append(obj_class(**config['params']))
+        component_list.append(obj_class(**param_config))
     return Compose(component_list) if len(component_list) > 0 else None
