@@ -62,6 +62,7 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
         super().__init__(layers)
         self.return_layers = orig_return_layers
         self.threshold = ext_config['threshold']
+        self.ext_training = False
 
     def get_ext_classifier(self):
         for _, module in self.items():
@@ -73,9 +74,6 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
         out = OrderedDict()
         ext_x = None
         for name, module in self.items():
-            if 'ext_classifier' in name:
-                continue
-
             x = module(x)
             if name in self.return_layers:
                 out_name = self.return_layers[name]
@@ -85,6 +83,8 @@ class ExtIntermediateLayerGetter(nn.ModuleDict):
                     out[out_name] = x
                     if x is None:
                         return None, ext_x
+                    elif self.ext_training:
+                        return x, ext_x
         return out, ext_x
 
 
@@ -104,7 +104,7 @@ class ExtBackboneWithFPN(nn.Module):
 
     def forward(self, x):
         z, ext_z = self.body(x)
-        if not self.training and z is None:
+        if (not self.training and z is None) or self.body.ext_training:
             return None, ext_z
         elif self.training:
             return z, ext_z

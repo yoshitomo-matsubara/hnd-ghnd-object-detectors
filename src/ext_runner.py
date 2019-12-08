@@ -120,17 +120,18 @@ def evaluate(model, data_loader, device, min_recall, split_name='Validation'):
     return roc_auc
 
 
-def train(model, train_sampler, train_data_loader, val_data_loader, device, distributed, config, args, ckpt_file_path):
+def train(model, ext_classifier, train_sampler, train_data_loader, val_data_loader, device, distributed,
+          config, args, ckpt_file_path):
     train_config = config['train']
     optim_config = train_config['optimizer']
-    ext_classifier = model.backbone.body.get_ext_classifier()
     optimizer = func_util.get_optimizer(ext_classifier, optim_config['type'], optim_config['params'])
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
-    if file_util.check_if_exists(ckpt_file_path):
-        load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
-
     best_val_roc_auc = 0.0
+    if file_util.check_if_exists(ckpt_file_path):
+        best_val_roc_auc, _, _ =\
+            load_ckpt(ckpt_file_path, model=ext_classifier, optimizer=optimizer, lr_scheduler=lr_scheduler)
+
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
     for epoch in range(num_epochs):
@@ -145,7 +146,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
         if val_roc_auc > best_val_roc_auc:
             print('Updating ckpt (Best ROC-AUC: {:.4f} -> {:.4f})'.format(best_val_roc_auc, val_roc_auc))
             best_val_roc_auc = val_roc_auc
-            save_ckpt(ext_classifier, optimizer, lr_scheduler, config, args, ckpt_file_path)
+            save_ckpt(ext_classifier, optimizer, lr_scheduler, best_val_roc_auc, config, args, ckpt_file_path)
 
 
 def main(args):
@@ -165,9 +166,10 @@ def main(args):
     model_config = config['model']
     model = get_model(model_config, device, strict=False)
     module_util.freeze_module_params(model)
-    module_util.unfreeze_module_params(model.backbone.body.get_ext_classifier())
+    ext_classifier = model.get_ext_classifier()
+    module_util.unfreeze_module_params(ext_classifier)
     print('Updatable parameters: {}'.format(module_util.get_updatable_param_names(model)))
-    model.ext_training = True
+    model.train_ext()
     if distributed:
         model = nn.parallel.DistributedDataParallel(model, device_ids=device_ids)
 
@@ -175,12 +177,12 @@ def main(args):
         print('Start training')
         start_time = time.time()
         ckpt_file_path = model_config['backbone']['ext_config']['ckpt']
-        train(model, train_sampler, train_data_loader, val_data_loader, device, distributed,
+        train(model, ext_classifier, train_sampler, train_data_loader, val_data_loader, device, distributed,
               config, args, ckpt_file_path)
         total_time = time.time() - start_time
         total_time_str = str(datetime.timedelta(seconds=int(total_time)))
         print('Training time {}'.format(total_time_str))
-        load_ckpt(ckpt_file_path, model=model.backbone.body.get_ext_classifier())
+        load_ckpt(ckpt_file_path, model=ext_classifier)
     evaluate(model, test_data_loader, device=device, min_recall=args.min_recall, split_name='Test')
 
 

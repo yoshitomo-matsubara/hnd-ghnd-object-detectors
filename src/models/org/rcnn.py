@@ -92,6 +92,13 @@ class CustomRCNN(nn.Module):
         self.ext_training = False
         self.distill_backbone_only = False
 
+    def train_ext(self):
+        self.ext_training = True
+        self.backbone.body.ext_training = True
+
+    def get_ext_classifier(self):
+        return self.backbone.body.get_ext_classifier()
+
     def forward(self, images, targets=None, fixed_sizes=None):
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
@@ -377,12 +384,12 @@ MODEL_CLASS_DICT = {
 }
 
 
-def get_base_backbone(backbone_name, backbone_config):
+def get_base_backbone(backbone_name, backbone_config, bottleneck_transformer=None):
     pretrained = backbone_config['params']['pretrained']
     if backbone_name.startswith('resne') or backbone_name.startswith('wide_resne'):
         return resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d)
     elif backbone_name.startswith('custom_resne') or backbone_name.startswith('custom_wide_resne'):
-        layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_config)
+        layer1, layer2, layer3, layer4 = get_mimic_layers(backbone_name, backbone_config, bottleneck_transformer)
         return custom.resnet.__dict__[backbone_name](pretrained=pretrained, norm_layer=misc_nn_ops.FrozenBatchNorm2d,
                                                      layer1=layer1, layer2=layer2, layer3=layer3, layer4=layer4)
     raise ValueError('backbone_name `{}` is not expected'.format(backbone_name))
@@ -413,14 +420,14 @@ def get_model_config(model_name):
 
 
 def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
-              custom_backbone=None, strict=True, progress=True, **kwargs):
+              custom_backbone=None, strict=True, progress=True, bottleneck_transformer=None, **kwargs):
     backbone_name = backbone_config['name']
     backbone_params_config = backbone_config['params']
     if pretrained:
         backbone_params_config['pretrained'] = False
 
     if custom_backbone is None:
-        base_backbone = get_base_backbone(backbone_name, backbone_config)
+        base_backbone = get_base_backbone(backbone_name, backbone_config, bottleneck_transformer)
         ext_config = backbone_config.get('ext_config', None)
         freeze_layers = backbone_params_config['freeze_layers']
         if ext_config is not None:
@@ -434,6 +441,7 @@ def get_model(model_name, pretrained, num_classes=91, backbone_config=None,
     model_class, pretrained_key = get_model_config(model_name)
     model = model_class(backbone, num_classes, **kwargs)
     if pretrained and backbone_name.endswith('resnet50'):
+        print('Loading pretrained state dict of {}'.format(backbone_name))
         if backbone_name != 'resnet50':
             strict = False
 
