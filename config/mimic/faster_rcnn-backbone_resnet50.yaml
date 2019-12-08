@@ -45,7 +45,7 @@ student_model:
                 bottleneck_channel: 3
     bottleneck_transformer:
         order: ['quantizer', 'dequantizer']
-        component:
+        components:
             quantizer:
                 params:
                     num_bits: 8
