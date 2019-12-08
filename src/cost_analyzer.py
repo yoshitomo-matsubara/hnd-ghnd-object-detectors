@@ -11,8 +11,7 @@ from torchvision.transforms import functional
 from models import get_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
-from structure.transformer import Compose, ToTensor
-from structure.transformer import DataLogger
+from structure.transformer import Compose, DataLogger, ToTensor, get_bottleneck_transformer
 from utils import coco_util, main_util, misc_util
 
 
@@ -138,7 +137,7 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
             images = list(image.to(device) for image in images)
             model(images)
 
-    data_sizes, quantized_data_sizes, tensor_shapes = data_size_logger.get_data()
+    data_sizes, fp16_data_sizes, quantized_data_sizes, tensor_shapes = data_size_logger.get_data()
     channel_list, height_list, width_list = list(), list(), list()
     min_shape, max_shape = None, None
     min_size, max_size = None, None
@@ -158,8 +157,10 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
     summarize_data_sizes(data_sizes, 'Bottleneck')
     print('Min tensor shape: {}'.format(min_shape))
     print('Max tensor shape: {}'.format(max_shape))
+    if fp16_data_sizes[0] is not None:
+        summarize_data_sizes(fp16_data_sizes, 'Quantized (16-bit) Bottleneck')
     if quantized_data_sizes[0] is not None:
-        summarize_data_sizes(quantized_data_sizes, 'Quantized Bottleneck')
+        summarize_data_sizes(quantized_data_sizes, 'Quantized (8-bit) Bottleneck')
     summarize_tensor_shape(channel_list, height_list, width_list)
 
 
@@ -170,16 +171,18 @@ def main(args):
 
     device = torch.device(args.device)
     print(args)
-    if args.model_params:
-        model = get_model(config['model'], device)
+    model_config = config.get('model', None)
+    if args.model_params and model_config is not None:
+        model = get_model(model_config, device)
         analyze_model_params(model, args.modules)
 
     if args.data_size is not None:
         analyze_data_size(config['dataset'], split_name=args.data_size, resized=args.resized)
 
-    if args.bottleneck_size is not None:
+    student_model_config = config.get('student_model', None)
+    if args.bottleneck_size is not None and student_model_config is not None:
         data_logger = DataLogger()
-        model = get_model(config['student_model'], device, bottleneck_transformer=data_logger)
+        model = get_model(student_model_config, device, bottleneck_transformer=data_logger)
         analyze_bottleneck_size(model, data_logger, device, config['dataset'], split_name=args.bottleneck_size)
 
 
