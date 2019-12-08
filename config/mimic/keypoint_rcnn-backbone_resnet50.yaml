@@ -72,35 +72,35 @@ train:
         type: 'general'
         params:
             org_loss_factor: 0.0
-    terms:
-        layer1:
-            ts_modules: ['backbone.body.layer1', 'backbone.body.layer1']
-            criterion:
-                type: 'MSELoss'
-                params:
-                    reduction: 'sum'
-            factor: 1.0
-        layer2:
-            ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
-            criterion:
-                type: 'MSELoss'
-                params:
-                    reduction: 'sum'
-            factor: 1.0
-        layer3:
-            ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
-            criterion:
-                type: 'MSELoss'
-                params:
-                    reduction: 'sum'
-            factor: 1.0
-        layer4:
-            ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
-            criterion:
-                type: 'MSELoss'
-                params:
-                    reduction: 'sum'
-            factor: 1.0
+        terms:
+            layer1:
+                ts_modules: ['backbone.body.layer1', 'backbone.body.layer1']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer2:
+                ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer3:
+                ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer4:
+                ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
     scheduler:
         type: 'MultiStepLR'
         params:
