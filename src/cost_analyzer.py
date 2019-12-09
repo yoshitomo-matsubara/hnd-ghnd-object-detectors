@@ -49,7 +49,7 @@ def analyze_model_params(model, module_paths):
 
 def summarize_data_sizes(data_sizes, title, data_rates=None):
     if data_rates is None:
-        data_rates = [0.001] + list(range(0.5, 10.5, 0.5))
+        data_rates = np.hstack(([0.001] + np.arange(0.5, 10.5, 0.5)))
 
     data_sizes = np.array(data_sizes)
     print('[{}]'.format(title))
