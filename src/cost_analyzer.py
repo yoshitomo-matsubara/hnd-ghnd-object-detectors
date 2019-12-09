@@ -47,11 +47,19 @@ def analyze_model_params(model, module_paths):
     print(data_frame)
 
 
-def summarize_data_sizes(data_sizes, title):
+def summarize_data_sizes(data_sizes, title, data_rates=None):
+    if data_rates is None:
+        data_rates = [0.001] + list(range(0.5, 10.5, 0.5))
+
     data_sizes = np.array(data_sizes)
     print('[{}]'.format(title))
     print('Data size:\t{:.4f} ± {:.4f} [KB]'.format(data_sizes.mean(), data_sizes.std()))
     print('# Files:\t{}\n'.format(len(data_sizes)))
+    data_frame = pd.DataFrame(columns=['Data rate [Mbps]', 'Communication delay [sec]'])
+    for i, data_rate in enumerate(data_rates):
+        comm_delay = data_sizes * 8 / (data_rate * 1000)
+        data_frame.loc[i] = [data_rate, '{:.4f} ± {:.4f}'.format(comm_delay.mean(), comm_delay.std())]
+    print(data_frame)
 
 
 def summarize_tensor_shape(channels, heights, widths):
