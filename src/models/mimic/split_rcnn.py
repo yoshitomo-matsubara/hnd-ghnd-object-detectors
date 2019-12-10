@@ -32,7 +32,7 @@ class RcnnHead(nn.Module):
                 return None
 
         if self.bottleneck_transformer is not None:
-            z, _ = self.bottleneck_transformer(z)
+            z, _ = self.bottleneck_transformer(z, targets)
         return z, images.tensors.shape, images.image_sizes, original_image_sizes
 
 
@@ -149,7 +149,7 @@ class RcnnTail(nn.Module):
 
     def forward(self, z, tensors_shape, image_sizes, original_image_sizes, targets=None):
         if self.bottleneck_transformer is not None:
-            z, _ = self.bottleneck_transformer(z)
+            z, _ = self.bottleneck_transformer(z, targets)
 
         layer1_feature = self.layer1_decoder(z)
         features = OrderedDict()
