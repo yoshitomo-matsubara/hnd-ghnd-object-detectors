@@ -245,6 +245,9 @@ def main(args):
         model = get_model(student_model_config, device, bottleneck_transformer=data_logger)
         analyze_bottleneck_size(model, data_logger, device, config['dataset'], split_name=args.bottleneck_size)
 
+    if student_model_config is not None:
+        model_config = student_model_config
+    
     if args.split_model is not None:
         model = get_model(model_config, device)
         analyze_split_model_inference(model, device, args.quantize, args.skip_tail, config['dataset'], args.data_size)
