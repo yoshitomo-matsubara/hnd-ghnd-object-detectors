@@ -18,8 +18,6 @@ class RcnnHead(nn.Module):
         self.layer0 = nn.Sequential(backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool)
         self.layer1_encoder = backbone.body.layer1.encoder
         self.bottleneck_transformer = bottleneck_transformer
-        del rcnn_model.transform, backbone.body.conv1, backbone.body.bn1
-        del backbone.body.relu, backbone.body.maxpool, backbone.body.layer1
 
     def forward(self, images, targets=None):
         # Keep transform inside the head just to make input of forward function simple
@@ -148,7 +146,6 @@ class RcnnTail(nn.Module):
                                           rpn.nms_thresh)
         self.roi_heads = rcnn_model.roi_heads
         self.transform = rcnn_model.transform
-        del rcnn_model
 
     def forward(self, z, tensors_shape, image_sizes, original_image_sizes, targets=None):
         if self.bottleneck_transformer is not None:
@@ -188,4 +185,5 @@ def split_rcnn_model(model, quantization):
     decoder_transformer = None if quantization is None else Dequantizer(num_bits=quantization)
     head_model = RcnnHead(model, bottleneck_transformer=Compose([encoder_transformer]))
     tail_model = RcnnTail(model, bottleneck_transformer=Compose([decoder_transformer]))
+    del model
     return head_model, tail_model
