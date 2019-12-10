@@ -181,9 +181,9 @@ class RcnnTail(nn.Module):
 
 
 def split_rcnn_model(model, quantization):
-    encoder_transformer = None if quantization is None else Quantizer(num_bits=quantization)
-    decoder_transformer = None if quantization is None else Dequantizer(num_bits=quantization)
-    head_model = RcnnHead(model, bottleneck_transformer=Compose([encoder_transformer]))
-    tail_model = RcnnTail(model, bottleneck_transformer=Compose([decoder_transformer]))
+    encoder_transformer = None if quantization is None else Compose([Quantizer(num_bits=quantization)])
+    decoder_transformer = None if quantization is None else Compose([Dequantizer(num_bits=quantization)])
+    head_model = RcnnHead(model, bottleneck_transformer=encoder_transformer)
+    tail_model = RcnnTail(model, bottleneck_transformer=decoder_transformer)
     del model
     return head_model, tail_model
