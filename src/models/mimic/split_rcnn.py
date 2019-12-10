@@ -7,20 +7,22 @@ from torchvision.models.detection import _utils as det_utils
 from torchvision.models.detection.rpn import AnchorGenerator, RegionProposalNetwork, concat_box_prediction_layers
 
 from models.ext.backbone import ExtIntermediateLayerGetter
+from structure.transformer import Compose, Quantizer, Dequantizer
 
 
 class RcnnHead(nn.Module):
-    def __init__(self, rcnn_model, ext_classifier=None, bottleneck_transformer=None):
+    def __init__(self, rcnn_model, bottleneck_transformer=None):
         super().__init__()
         backbone = rcnn_model.backbone
+        self.transform = rcnn_model.transform
         self.layer0 = nn.Sequential(backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool)
-        self.ext_classifier = ext_classifier
         self.layer1_encoder = backbone.layer1.encoder
         self.bottleneck_transformer = bottleneck_transformer
-        del backbone.backbone.body.conv1, backbone.backbone.body.bn1
+        del rcnn_model.transform, backbone.backbone.body.conv1, backbone.backbone.body.bn1
         del backbone.backbone.body.relu, backbone.backbone.body.maxpool
 
     def forward(self, images, targets=None):
+        # Keep transform inside the head just to make input of forward function simple
         original_image_sizes = [img.shape[-2:] for img in images]
         images, targets = self.transform(images, targets)
         z = self.layer0(images)
@@ -179,3 +181,11 @@ class RcnnTail(nn.Module):
             loss_dict.update(proposal_losses)
             return loss_dict
         return detections
+
+
+def split_rcnn_model(model, quantization):
+    encoder_transformer = None if quantization is None else Quantizer(num_bits=quantization)
+    decoder_transformer = None if quantization is None else Dequantizer(num_bits=quantization)
+    head_model = RcnnHead(model, bottleneck_transformer=Compose([encoder_transformer]))
+    tail_model = RcnnHead(model, bottleneck_transformer=Compose([decoder_transformer]))
+    return head_model, tail_model

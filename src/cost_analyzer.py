@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 from io import BytesIO
 
 import numpy as np
@@ -9,9 +10,10 @@ from PIL import Image
 from torchvision.transforms import functional
 
 from models import get_model
+from models.mimic import split_rcnn
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
-from structure.transformer import Compose, DataLogger, ToTensor, get_bottleneck_transformer
+from structure.transformer import Compose, DataLogger, ToTensor
 from utils import coco_util, main_util, misc_util
 
 
@@ -26,6 +28,9 @@ def get_argparser():
     argparser.add_argument('-resized', action='store_true',
                            help='resize input image, following the preprocessing approach used in R-CNNs')
     argparser.add_argument('--bottleneck_size', help='dataset split name to analyze size of bottleneck in model')
+    argparser.add_argument('--split_model', help='measure inference time for split models')
+    argparser.add_argument('--quantize', type=int, help='quantize bottleneck tensor with 16 / 8 bits')
+    argparser.add_argument('-skip_tail', action='store_true', help='skip measuring inference time for tail model')
     return argparser
 
 
@@ -172,6 +177,53 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
     summarize_tensor_shape(channel_list, height_list, width_list)
 
 
+def summarize_inference_time(head_proc_times, tail_proc_times, total_proc_times):
+    head_proc_times, tail_proc_times, total_proc_times =\
+        np.array(head_proc_times), np.array(tail_proc_times), np.array(total_proc_times)
+    print('Tensor shape')
+    print('Head Processing time:\t{:.4f} ± {:.4f} [sec]'.format(head_proc_times.mean(), head_proc_times.std()))
+    print('Tail Processing time:\t{:.4f} ± {:.4f} [sec]'.format(tail_proc_times.mean(), tail_proc_times.std()))
+    print('Total Processing time:\t{:.4f} ± {:.4f} [sec]'.format(total_proc_times.mean(), total_proc_times.std()))
+
+
+def analyze_split_model_inference(model, device, quantization, head_only, dataset_config, split_name='test'):
+    head_model, tail_model = split_rcnn(model, quantization)
+    head_model.eval()
+    tail_model.eval()
+    if head_only:
+        del tail_model
+        tail_model = None
+
+    cpu_device = torch.device('cpu')
+    split_config = dataset_config['splits'][split_name]
+    dataset = coco_util.get_coco(split_config['images'], split_config['annotations'], Compose([ToTensor()]),
+                                 split_config['remove_non_annotated_imgs'], split_config['jpeg_quality'])
+    sampler = torch.utils.data.SequentialSampler(dataset)
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=sampler, collate_fn=misc_util.collate_fn,
+                                              num_workers=dataset_config['num_workers'])
+    head_proc_time_list = list()
+    tail_proc_time_list = list()
+    total_proc_time_list = list()
+    for images, targets in data_loader:
+        images = list(image.to(device) for image in images)
+        targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        head_start_time = time.time()
+        head_output = head_model(images, targets)
+        head_proc_time = time.time() - head_start_time
+        head_proc_time_list.append(head_proc_time)
+        if head_output is None or tail_model is None:
+            tail_proc_time = 0.0
+        else:
+            tail_start_time = time.time()
+            outputs = tail_model(*head_output)
+            outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+            tail_proc_time = time.time() - tail_start_time
+
+        tail_proc_time_list.append(tail_proc_time)
+        total_proc_time_list.append(head_proc_time + tail_proc_time)
+    summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
+
+
 def main(args):
     config = yaml_util.load_yaml_file(args.config)
     if args.json is not None:
@@ -192,6 +244,10 @@ def main(args):
         data_logger = DataLogger()
         model = get_model(student_model_config, device, bottleneck_transformer=data_logger)
         analyze_bottleneck_size(model, data_logger, device, config['dataset'], split_name=args.bottleneck_size)
+
+    if args.split_model is not None:
+        model = get_model(model_config, device)
+        analyze_split_model_inference(model, device, args.quantize, args.skip_tail, config['dataset'], args.data_size)
 
 
 if __name__ == '__main__':
