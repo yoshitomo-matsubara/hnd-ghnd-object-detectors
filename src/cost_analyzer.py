@@ -218,7 +218,9 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         head_proc_time = time.time() - head_start_time
         head_proc_time_list.append(head_proc_time)
         if head_output is None or tail_model is None:
-            filtered_count += 1
+            if head_output is None:
+                filtered_count += 1
+            
             tail_proc_time = 0.0
             outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
                         'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
