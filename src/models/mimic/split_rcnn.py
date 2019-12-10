@@ -187,5 +187,5 @@ def split_rcnn_model(model, quantization):
     encoder_transformer = None if quantization is None else Quantizer(num_bits=quantization)
     decoder_transformer = None if quantization is None else Dequantizer(num_bits=quantization)
     head_model = RcnnHead(model, bottleneck_transformer=Compose([encoder_transformer]))
-    tail_model = RcnnHead(model, bottleneck_transformer=Compose([decoder_transformer]))
+    tail_model = RcnnTail(model, bottleneck_transformer=Compose([decoder_transformer]))
     return head_model, tail_model
