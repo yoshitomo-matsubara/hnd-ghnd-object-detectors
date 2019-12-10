@@ -127,7 +127,7 @@ class ModifiedAnchorGenerator(nn.Module):
     def forward(self, image_sizes, tensors_shape, feature_maps):
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
         image_size = tensors_shape[-2:]
-        strides = [[int(image_size[0] / g[0]), int(image_size[1] / g[1])] for g in grid_sizes]
+        strides = tuple((image_size[0] / g[0], image_size[1] / g[1]) for g in grid_sizes)
         self.set_cell_anchors(feature_maps[0].device)
         anchors_over_all_feature_maps = self.cached_grid_anchors(grid_sizes, strides)
         anchors = torch.jit.annotate(List[List[torch.Tensor]], [])
