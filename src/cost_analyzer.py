@@ -230,6 +230,7 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         tail_proc_time_list.append(tail_proc_time)
         total_proc_time_list.append(head_proc_time + tail_proc_time)
 
+    coco_evaluator.synchronize_between_processes()
     coco_evaluator.accumulate()
     coco_evaluator.summarize()
     summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
