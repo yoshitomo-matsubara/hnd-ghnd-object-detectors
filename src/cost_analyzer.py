@@ -181,10 +181,9 @@ def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, spl
 def summarize_inference_time(head_proc_times, tail_proc_times, total_proc_times):
     head_proc_times, tail_proc_times, total_proc_times =\
         np.array(head_proc_times), np.array(tail_proc_times), np.array(total_proc_times)
-    print('Tensor shape')
-    print('Head Processing time:\t{:.4f} ± {:.4f} [sec]'.format(head_proc_times.mean(), head_proc_times.std()))
-    print('Tail Processing time:\t{:.4f} ± {:.4f} [sec]'.format(tail_proc_times.mean(), tail_proc_times.std()))
-    print('Total Processing time:\t{:.4f} ± {:.4f} [sec]'.format(total_proc_times.mean(), total_proc_times.std()))
+    print('Head model delay:\t{:.4f} ± {:.4f} [sec]'.format(head_proc_times.mean(), head_proc_times.std()))
+    print('Tail model delay:\t{:.4f} ± {:.4f} [sec]'.format(tail_proc_times.mean(), tail_proc_times.std()))
+    print('Total model delay:\t{:.4f} ± {:.4f} [sec]'.format(total_proc_times.mean(), total_proc_times.std()))
 
 
 def analyze_split_model_inference(model, device, quantization, head_only, dataset_config, split_name='test'):
@@ -207,6 +206,7 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
     head_proc_time_list = list()
     tail_proc_time_list = list()
     total_proc_time_list = list()
+    filtered_count = 0
     for images, targets in data_loader:
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
@@ -218,6 +218,7 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         head_proc_time = time.time() - head_start_time
         head_proc_time_list.append(head_proc_time)
         if head_output is None or tail_model is None:
+            filtered_count += 1
             tail_proc_time = 0.0
             outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
                         'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
@@ -236,6 +237,7 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
     coco_evaluator.synchronize_between_processes()
     coco_evaluator.accumulate()
     coco_evaluator.summarize()
+    print('{} / {} images were filtered away by head model'.format(filtered_count, len(head_proc_time_list)))
     summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
 
 
