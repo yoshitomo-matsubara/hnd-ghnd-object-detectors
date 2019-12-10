@@ -128,8 +128,7 @@ class ModifiedAnchorGenerator(nn.Module):
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
         image_size = tensors_shape[-2:]
         strides = [[int(image_size[0] / g[0]), int(image_size[1] / g[1])] for g in grid_sizes]
-        dtype, device = feature_maps[0].dtype, feature_maps[0].device
-        self.set_cell_anchors(dtype, device)
+        self.set_cell_anchors(feature_maps[0].device)
         anchors_over_all_feature_maps = self.cached_grid_anchors(grid_sizes, strides)
         anchors = torch.jit.annotate(List[List[torch.Tensor]], [])
         for i, (image_height, image_width) in enumerate(image_sizes):
