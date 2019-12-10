@@ -62,10 +62,10 @@ class ModifiedAnchorGenerator(nn.Module):
         self.cell_anchors = None
         self._cache = {}
 
-    # TODO: https://github.com/pytorch/pytorch/issues/26792
-    def generate_anchors(self, scales, aspect_ratios, dtype=torch.float32, device="cpu"):
-        scales = torch.as_tensor(scales, dtype=dtype, device=device)
-        aspect_ratios = torch.as_tensor(aspect_ratios, dtype=dtype, device=device)
+    @staticmethod
+    def generate_anchors(scales, aspect_ratios, device="cpu"):
+        scales = torch.as_tensor(scales, dtype=torch.float32, device=device)
+        aspect_ratios = torch.as_tensor(aspect_ratios, dtype=torch.float32, device=device)
         h_ratios = torch.sqrt(aspect_ratios)
         w_ratios = 1 / h_ratios
 
@@ -75,15 +75,13 @@ class ModifiedAnchorGenerator(nn.Module):
         base_anchors = torch.stack([-ws, -hs, ws, hs], dim=1) / 2
         return base_anchors.round()
 
-    def set_cell_anchors(self, dtype, device):
+    def set_cell_anchors(self, device):
         if self.cell_anchors is not None:
-            return
-
+            return self.cell_anchors
         cell_anchors = [
             self.generate_anchors(
                 sizes,
                 aspect_ratios,
-                dtype,
                 device
             )
             for sizes, aspect_ratios in zip(self.sizes, self.aspect_ratios)
@@ -95,18 +93,11 @@ class ModifiedAnchorGenerator(nn.Module):
 
     def grid_anchors(self, grid_sizes, strides):
         anchors = []
-        cell_anchors = self.cell_anchors
-        assert cell_anchors is not None
-
         for size, stride, base_anchors in zip(
-            grid_sizes, strides, cell_anchors
+            grid_sizes, strides, self.cell_anchors
         ):
             grid_height, grid_width = size
             stride_height, stride_width = stride
-            if torchvision._is_tracing():
-                # required in ONNX export for mult operation with float32
-                stride_width = torch.tensor(stride_width, dtype=torch.float32)
-                stride_height = torch.tensor(stride_height, dtype=torch.float32)
             device = base_anchors.device
             shifts_x = torch.arange(
                 0, grid_width, dtype=torch.float32, device=device
@@ -126,7 +117,7 @@ class ModifiedAnchorGenerator(nn.Module):
         return anchors
 
     def cached_grid_anchors(self, grid_sizes, strides):
-        key = str(grid_sizes + strides)
+        key = tuple(grid_sizes) + tuple(strides)
         if key in self._cache:
             return self._cache[key]
         anchors = self.grid_anchors(grid_sizes, strides)
