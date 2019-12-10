@@ -48,18 +48,13 @@ class ModifiedAnchorGenerator(AnchorGenerator):
         sizes=(128, 256, 512),
         aspect_ratios=(0.5, 1.0, 2.0),
     ):
-        super().__init__()
+        super().__init__(sizes, aspect_ratios)
         if not isinstance(sizes[0], (list, tuple)):
             # TODO change this
             sizes = tuple((s,) for s in sizes)
         if not isinstance(aspect_ratios[0], (list, tuple)):
             aspect_ratios = (aspect_ratios,) * len(sizes)
-
         assert len(sizes) == len(aspect_ratios)
-        self.sizes = sizes
-        self.aspect_ratios = aspect_ratios
-        self.cell_anchors = None
-        self._cache = {}
 
     def forward(self, image_sizes, tensors_shape, feature_maps):
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])
