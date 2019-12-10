@@ -172,7 +172,7 @@ class RcnnTail(nn.Module):
         for layer_name, sub_feature in sub_features.items():
             features[layer_name] = sub_feature
 
-        proposals, proposal_losses = self.rpn(tensors_shape, features, targets)
+        proposals, proposal_losses = self.rpn(image_sizes, tensors_shape, features, targets)
         detections, detector_losses = self.roi_heads(features, proposals, image_sizes, targets)
         detections = self.transform.postprocess(detections, image_sizes, original_image_sizes)
         if self.training:
