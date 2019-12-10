@@ -10,7 +10,7 @@ from PIL import Image
 from torchvision.transforms import functional
 
 from models import get_model
-from models.mimic import split_rcnn
+from models.mimic.split_rcnn import split_rcnn_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
 from structure.transformer import Compose, DataLogger, ToTensor
@@ -187,7 +187,7 @@ def summarize_inference_time(head_proc_times, tail_proc_times, total_proc_times)
 
 
 def analyze_split_model_inference(model, device, quantization, head_only, dataset_config, split_name='test'):
-    head_model, tail_model = split_rcnn(model, quantization)
+    head_model, tail_model = split_rcnn_model(model, quantization)
     head_model.eval()
     tail_model.eval()
     if head_only:
