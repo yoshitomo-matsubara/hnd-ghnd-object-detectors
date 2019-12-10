@@ -167,6 +167,8 @@ class RcnnTail(nn.Module):
         self.bottleneck_transformer = bottleneck_transformer
         self.layer1_decoder = rcnn_model.backbone.body.layer1.decoder
         del rcnn_model.backbone.body.layer1
+        self.sub_backbone = rcnn_model.backbone
+        rcnn_model.backbone.body.return_layers.pop('layer1')
         self.sub_backbone.body =\
             ModifiedIntermediateLayerGetter(rcnn_model.backbone.body, rcnn_model.backbone.body.return_layers)
         # Anchor Generator and RPN do not use tensors of images, thus they are modified so that we can split RCNN
