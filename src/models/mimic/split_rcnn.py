@@ -18,7 +18,7 @@ class RcnnHead(nn.Module):
         self.layer0 = nn.Sequential(backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool)
         self.layer1_encoder = backbone.body.layer1.encoder
         self.bottleneck_transformer = bottleneck_transformer
-        del backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool, backbone.body.layer1
+        del backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool
 
     def forward(self, images, targets=None):
         # Keep transform inside the head just to make input of forward function simple
@@ -136,6 +136,7 @@ class RcnnTail(nn.Module):
         super().__init__()
         self.bottleneck_transformer = bottleneck_transformer
         self.layer1_decoder = rcnn_model.backbone.body.layer1.decoder
+        del rcnn_model.backbone.layer1
         self.sub_backbone = rcnn_model.backbone
         # Anchor Generator and RPN do not use tensors of images, thus they are modified so that we can split RCNN
         rpn = rcnn_model.rpn
