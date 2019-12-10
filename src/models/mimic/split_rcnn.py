@@ -18,6 +18,7 @@ class RcnnHead(nn.Module):
         self.layer0 = nn.Sequential(backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool)
         self.layer1_encoder = backbone.body.layer1.encoder
         self.bottleneck_transformer = bottleneck_transformer
+        del backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool, backbone.body.layer1
 
     def forward(self, images, targets=None):
         # Keep transform inside the head just to make input of forward function simple
