@@ -65,13 +65,12 @@ class ModifiedIntermediateLayerGetter(nn.ModuleDict):
         out = OrderedDict()
         out[0] = layer1_output
         x = layer1_output
-        ext_x = None
         for name, module in self.items():
             x = module(x)
             if name in self.return_layers:
                 out_name = self.return_layers[name]
                 out[out_name] = x
-        return out, ext_x
+        return out
 
 
 class ModifiedAnchorGenerator(AnchorGenerator):
