@@ -37,6 +37,44 @@ class RcnnHead(nn.Module):
         return z, images.tensors.shape, images.image_sizes, original_image_sizes
 
 
+class ModifiedIntermediateLayerGetter(nn.ModuleDict):
+    _version = 2
+    __constants__ = ['layers']
+    __annotations__ = {
+        "return_layers": Dict[str, str],
+    }
+
+    def __init__(self, model, return_layers):
+        if not set(return_layers).issubset([name for name, _ in model.named_children()]):
+            raise ValueError("return_layers are not present in model")
+
+        orig_return_layers = return_layers
+        return_layers = {k: v for k, v in return_layers.items()}
+        layers = OrderedDict()
+        for name, module in model.named_children():
+            layers[name] = module
+            if name in return_layers:
+                del return_layers[name]
+            if not return_layers:
+                break
+
+        super().__init__(layers)
+        self.return_layers = orig_return_layers
+
+    def forward(self, x, is_layer1_output=False):
+        out = OrderedDict()
+        if is_layer1_output:
+            out[0] = x
+
+        ext_x = None
+        for name, module in self.items():
+            x = module(x)
+            if name in self.return_layers:
+                out_name = self.return_layers[name]
+                out[out_name] = x
+        return out, ext_x
+
+
 class ModifiedAnchorGenerator(AnchorGenerator):
     __annotations__ = {
         "cell_anchors": Optional[List[torch.Tensor]],
@@ -129,7 +167,8 @@ class RcnnTail(nn.Module):
         self.bottleneck_transformer = bottleneck_transformer
         self.layer1_decoder = rcnn_model.backbone.body.layer1.decoder
         del rcnn_model.backbone.body.layer1
-        self.sub_backbone = rcnn_model.backbone
+        self.sub_backbone.body =\
+            ModifiedIntermediateLayerGetter(rcnn_model.backbone.body, rcnn_model.backbone.body.return_layers)
         # Anchor Generator and RPN do not use tensors of images, thus they are modified so that we can split RCNN
         rpn = rcnn_model.rpn
         anchor_generator = ModifiedAnchorGenerator(rpn.anchor_generator.sizes, rpn.anchor_generator.aspect_ratios)
@@ -146,12 +185,10 @@ class RcnnTail(nn.Module):
             z, _ = self.bottleneck_transformer(z, targets)
 
         layer1_feature = self.layer1_decoder(z)
-        features = OrderedDict()
-        features[0] = layer1_feature
-        sub_features = self.sub_backbone(layer1_feature)
+        features = self.sub_backbone(layer1_feature, is_layer1_output=True)
         loss_dict = dict()
         if isinstance(self.sub_backbone.body, ExtIntermediateLayerGetter):
-            sub_features, ext_logits = sub_features
+            sub_features, ext_logits = features
             if not self.training and sub_features is None:
                 pred_dict = {'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
                              'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
@@ -160,9 +197,6 @@ class RcnnTail(nn.Module):
 
         if isinstance(features, torch.Tensor):
             features = OrderedDict([(0, features)])
-
-        for layer_name, sub_feature in sub_features.items():
-            features[layer_name] = sub_feature
 
         proposals, proposal_losses = self.rpn(image_sizes, tensors_shape, features, targets)
         detections, detector_losses = self.roi_heads(features, proposals, image_sizes, targets)
