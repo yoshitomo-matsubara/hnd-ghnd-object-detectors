@@ -214,7 +214,7 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
             torch.cuda.synchronize()
 
         head_start_time = time.time()
-        head_output = head_model(images, targets)
+        head_output = head_model(images)
         head_proc_time = time.time() - head_start_time
         head_proc_time_list.append(head_proc_time)
         if head_output is None or tail_model is None:
