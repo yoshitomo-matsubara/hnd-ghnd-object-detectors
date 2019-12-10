@@ -16,10 +16,10 @@ class RcnnHead(nn.Module):
         backbone = rcnn_model.backbone
         self.transform = rcnn_model.transform
         self.layer0 = nn.Sequential(backbone.body.conv1, backbone.body.bn1, backbone.body.relu, backbone.body.maxpool)
-        self.layer1_encoder = backbone.layer1.encoder
+        self.layer1_encoder = backbone.body.layer1.encoder
         self.bottleneck_transformer = bottleneck_transformer
-        del rcnn_model.transform, backbone.backbone.body.conv1, backbone.backbone.body.bn1
-        del backbone.backbone.body.relu, backbone.backbone.body.maxpool
+        del rcnn_model.transform, backbone.body.conv1, backbone.body.bn1
+        del backbone.body.relu, backbone.body.maxpool, backbone.body.layer1
 
     def forward(self, images, targets=None):
         # Keep transform inside the head just to make input of forward function simple
