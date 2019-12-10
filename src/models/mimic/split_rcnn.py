@@ -23,7 +23,7 @@ class RcnnHead(nn.Module):
         # Keep transform inside the head just to make input of forward function simple
         original_image_sizes = [img.shape[-2:] for img in images]
         images, targets = self.transform(images, targets)
-        z = self.layer0(images)
+        z = self.layer0(images.tensors)
         z = self.layer1_encoder(z)
         if self.layer1_encoder.ext_classifier is not None:
             z, ext_z = z
