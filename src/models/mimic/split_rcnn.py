@@ -1,11 +1,10 @@
 from collections import OrderedDict
 
 import torch
-import torchvision
 from torch import nn
 from torch.jit.annotations import List, Optional, Dict
 from torchvision.models.detection import _utils as det_utils
-from torchvision.models.detection.rpn import RegionProposalNetwork, concat_box_prediction_layers
+from torchvision.models.detection.rpn import AnchorGenerator, RegionProposalNetwork, concat_box_prediction_layers
 
 from models.ext.backbone import ExtIntermediateLayerGetter
 from structure.transformer import Compose, Quantizer, Dequantizer
@@ -38,7 +37,7 @@ class RcnnHead(nn.Module):
         return z, images.tensors.shape, images.image_sizes, original_image_sizes
 
 
-class ModifiedAnchorGenerator(nn.Module):
+class ModifiedAnchorGenerator(AnchorGenerator):
     __annotations__ = {
         "cell_anchors": Optional[List[torch.Tensor]],
         "_cache": Dict[str, List[torch.Tensor]]
@@ -61,68 +60,6 @@ class ModifiedAnchorGenerator(nn.Module):
         self.aspect_ratios = aspect_ratios
         self.cell_anchors = None
         self._cache = {}
-
-    @staticmethod
-    def generate_anchors(scales, aspect_ratios, device="cpu"):
-        scales = torch.as_tensor(scales, dtype=torch.float32, device=device)
-        aspect_ratios = torch.as_tensor(aspect_ratios, dtype=torch.float32, device=device)
-        h_ratios = torch.sqrt(aspect_ratios)
-        w_ratios = 1 / h_ratios
-
-        ws = (w_ratios[:, None] * scales[None, :]).view(-1)
-        hs = (h_ratios[:, None] * scales[None, :]).view(-1)
-
-        base_anchors = torch.stack([-ws, -hs, ws, hs], dim=1) / 2
-        return base_anchors.round()
-
-    def set_cell_anchors(self, device):
-        if self.cell_anchors is not None:
-            return self.cell_anchors
-        cell_anchors = [
-            self.generate_anchors(
-                sizes,
-                aspect_ratios,
-                device
-            )
-            for sizes, aspect_ratios in zip(self.sizes, self.aspect_ratios)
-        ]
-        self.cell_anchors = cell_anchors
-
-    def num_anchors_per_location(self):
-        return [len(s) * len(a) for s, a in zip(self.sizes, self.aspect_ratios)]
-
-    def grid_anchors(self, grid_sizes, strides):
-        anchors = []
-        for size, stride, base_anchors in zip(
-            grid_sizes, strides, self.cell_anchors
-        ):
-            grid_height, grid_width = size
-            stride_height, stride_width = stride
-            device = base_anchors.device
-            shifts_x = torch.arange(
-                0, grid_width, dtype=torch.float32, device=device
-            ) * stride_width
-            shifts_y = torch.arange(
-                0, grid_height, dtype=torch.float32, device=device
-            ) * stride_height
-            shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x)
-            shift_x = shift_x.reshape(-1)
-            shift_y = shift_y.reshape(-1)
-            shifts = torch.stack((shift_x, shift_y, shift_x, shift_y), dim=1)
-
-            anchors.append(
-                (shifts.view(-1, 1, 4) + base_anchors.view(1, -1, 4)).reshape(-1, 4)
-            )
-
-        return anchors
-
-    def cached_grid_anchors(self, grid_sizes, strides):
-        key = tuple(grid_sizes) + tuple(strides)
-        if key in self._cache:
-            return self._cache[key]
-        anchors = self.grid_anchors(grid_sizes, strides)
-        self._cache[key] = anchors
-        return anchors
 
     def forward(self, image_sizes, tensors_shape, feature_maps):
         grid_sizes = list([feature_map.shape[-2:] for feature_map in feature_maps])

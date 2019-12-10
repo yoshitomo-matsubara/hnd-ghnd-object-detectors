@@ -9,12 +9,13 @@ import torch
 from PIL import Image
 from torchvision.transforms import functional
 
-from models import get_model
+from models import get_model, get_iou_types
 from models.mimic.split_rcnn import split_rcnn_model
 from myutils.common import yaml_util
 from myutils.pytorch import module_util
 from structure.transformer import Compose, DataLogger, ToTensor
 from utils import coco_util, main_util, misc_util
+from utils.coco_eval_util import CocoEvaluator
 
 
 def get_argparser():
@@ -201,6 +202,8 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
     sampler = torch.utils.data.SequentialSampler(dataset)
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, sampler=sampler, collate_fn=misc_util.collate_fn,
                                               num_workers=dataset_config['num_workers'])
+    iou_types = get_iou_types(model)
+    coco_evaluator = CocoEvaluator(coco_util.get_coco_api_from_dataset(data_loader.dataset), iou_types)
     head_proc_time_list = list()
     tail_proc_time_list = list()
     total_proc_time_list = list()
@@ -213,14 +216,22 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         head_proc_time_list.append(head_proc_time)
         if head_output is None or tail_model is None:
             tail_proc_time = 0.0
+            outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
+                        'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
+                        'keypoints_scores': torch.empty(0, 17)}]
         else:
             tail_start_time = time.time()
             outputs = tail_model(*head_output)
             outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
             tail_proc_time = time.time() - tail_start_time
 
+        res = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
+        coco_evaluator.update(res)
         tail_proc_time_list.append(tail_proc_time)
         total_proc_time_list.append(head_proc_time + tail_proc_time)
+        
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
     summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
 
 
