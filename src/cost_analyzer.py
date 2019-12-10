@@ -28,7 +28,7 @@ def get_argparser():
     argparser.add_argument('-resized', action='store_true',
                            help='resize input image, following the preprocessing approach used in R-CNNs')
     argparser.add_argument('--bottleneck_size', help='dataset split name to analyze size of bottleneck in model')
-    argparser.add_argument('--split_model', help='measure inference time for split models')
+    argparser.add_argument('--split_model', help='dataset split name to measure inference time for split models')
     argparser.add_argument('--quantize', type=int, help='quantize bottleneck tensor with 16 / 8 bits')
     argparser.add_argument('-skip_tail', action='store_true', help='skip measuring inference time for tail model')
     return argparser
@@ -247,10 +247,10 @@ def main(args):
 
     if student_model_config is not None:
         model_config = student_model_config
-    
+
     if args.split_model is not None:
         model = get_model(model_config, device)
-        analyze_split_model_inference(model, device, args.quantize, args.skip_tail, config['dataset'], args.data_size)
+        analyze_split_model_inference(model, device, args.quantize, args.skip_tail, config['dataset'], args.split_model)
 
 
 if __name__ == '__main__':
