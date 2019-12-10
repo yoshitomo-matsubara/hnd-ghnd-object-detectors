@@ -147,7 +147,7 @@ class RcnnTail(nn.Module):
 
         layer1_feature = self.layer1_decoder(z)
         features = OrderedDict()
-        features['layer1'] = layer1_feature
+        features[0] = layer1_feature
         sub_features = self.sub_backbone(layer1_feature)
         loss_dict = dict()
         if isinstance(self.sub_backbone.body, ExtIntermediateLayerGetter):
