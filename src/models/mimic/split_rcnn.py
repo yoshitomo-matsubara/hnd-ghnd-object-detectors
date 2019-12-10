@@ -6,7 +6,7 @@ from torch.jit.annotations import List, Optional, Dict
 from torchvision.models.detection import _utils as det_utils
 from torchvision.models.detection.rpn import AnchorGenerator, RegionProposalNetwork, concat_box_prediction_layers
 
-from models.ext.backbone import ExtIntermediateLayerGetter
+from models.ext.backbone import ExtIntermediateLayerGetter, ExtBackboneWithFPN
 from structure.transformer import Compose, Quantizer, Dequantizer
 
 
@@ -165,10 +165,13 @@ class RcnnTail(nn.Module):
         self.bottleneck_transformer = bottleneck_transformer
         self.layer1_decoder = rcnn_model.backbone.body.layer1.decoder
         del rcnn_model.backbone.body.layer1
-        self.sub_backbone = rcnn_model.backbone
-        rcnn_model.backbone.body.return_layers.pop('layer1')
-        self.sub_backbone.body =\
-            ModifiedIntermediateLayerGetter(rcnn_model.backbone.body, rcnn_model.backbone.body.return_layers)
+        backbone = rcnn_model.backbone
+        if isinstance(backbone, ExtBackboneWithFPN):
+            backbone.split = True
+
+        backbone.body.return_layers.pop('layer1')
+        backbone.body = ModifiedIntermediateLayerGetter(backbone.body, backbone.body.return_layers)
+        self.sub_backbone = backbone
         # Anchor Generator and RPN do not use tensors of images, thus they are modified so that we can split RCNN
         rpn = rcnn_model.rpn
         anchor_generator = ModifiedAnchorGenerator(rpn.anchor_generator.sizes, rpn.anchor_generator.aspect_ratios)
