@@ -138,9 +138,9 @@ class RcnnTail(nn.Module):
         self.sub_backbone = rcnn_model.backbone
         # Anchor Generator and RPN do not use tensors of images, thus they are modified so that we can split RCNN
         rpn = rcnn_model.rpn
+        anchor_generator = ModifiedAnchorGenerator(rcnn_model.rpn.anchor_generator.sizes, rcnn_model.aspect_ratios)
         self.rpn =\
-            ModifiedRegionProposalNetwork(ModifiedAnchorGenerator(rcnn_model.rpn.sizes, rcnn_model.aspect_ratios),
-                                          rpn.head, rpn.proposal_matcher.high_threshold,
+            ModifiedRegionProposalNetwork(anchor_generator, rpn.head, rpn.proposal_matcher.high_threshold,
                                           rpn.proposal_matcher.low_threshold, rpn.fg_bg_sampler.batch_size_per_image,
                                           rpn.fg_bg_sampler.positive_fraction, rpn._pre_nms_top_n, rpn._post_nms_top_n,
                                           rpn.nms_thresh)
