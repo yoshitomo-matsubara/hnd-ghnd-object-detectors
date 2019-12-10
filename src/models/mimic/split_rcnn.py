@@ -61,11 +61,10 @@ class ModifiedIntermediateLayerGetter(nn.ModuleDict):
         super().__init__(layers)
         self.return_layers = orig_return_layers
 
-    def forward(self, x, is_layer1_output=False):
+    def forward(self, layer1_output):
         out = OrderedDict()
-        if is_layer1_output:
-            out[0] = x
-
+        out[0] = layer1_output
+        x = layer1_output
         ext_x = None
         for name, module in self.items():
             x = module(x)
@@ -187,7 +186,7 @@ class RcnnTail(nn.Module):
             z, _ = self.bottleneck_transformer(z, targets)
 
         layer1_feature = self.layer1_decoder(z)
-        features = self.sub_backbone(layer1_feature, is_layer1_output=True)
+        features = self.sub_backbone(layer1_feature)
         loss_dict = dict()
         if isinstance(self.sub_backbone.body, ExtIntermediateLayerGetter):
             sub_features, ext_logits = features
