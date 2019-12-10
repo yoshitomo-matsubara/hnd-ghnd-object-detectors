@@ -210,6 +210,9 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
     for images, targets in data_loader:
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+
         head_start_time = time.time()
         head_output = head_model(images, targets)
         head_proc_time = time.time() - head_start_time
