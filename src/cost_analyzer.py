@@ -234,16 +234,18 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
             outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
             tail_proc_time = time.time() - tail_start_time
 
-        if outputs is None:
+        if outputs is not None:
             res = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
             coco_evaluator.update(res)
-        
+
         tail_proc_time_list.append(tail_proc_time)
         total_proc_time_list.append(head_proc_time + tail_proc_time)
 
-    coco_evaluator.synchronize_between_processes()
-    coco_evaluator.accumulate()
-    coco_evaluator.summarize()
+    if not head_only:
+        coco_evaluator.synchronize_between_processes()
+        coco_evaluator.accumulate()
+        coco_evaluator.summarize()
+    
     print('{} / {} images were filtered away by head model'.format(filtered_count, len(head_proc_time_list)))
     summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
 
