@@ -1,5 +1,7 @@
 from torch import nn
 
+from structure.transformer import DataLogger
+
 
 class ExtEncoder(nn.Module):
     def __init__(self, encoder, ext_classifier=None, ext_config=None):
@@ -29,11 +31,14 @@ class BottleneckBase4Ext(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.bottleneck_transformer = bottleneck_transformer
+        self.data_logging = isinstance(self.bottleneck_transformer, DataLogger)
         self.uses_ext_encoder = isinstance(encoder, ExtEncoder) and encoder.ext_classifier is not None
 
     def forward_ext(self, z):
         z, ext_z = z
         if z is None:
+            if self.data_logging:
+                self.bottleneck_transformer(None, target=None)
             return z, ext_z
         elif not self.training and self.bottleneck_transformer is not None:
             device = z.device

@@ -245,7 +245,7 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         coco_evaluator.synchronize_between_processes()
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
-    
+
     print('{} / {} images were filtered away by head model'.format(filtered_count, len(head_proc_time_list)))
     summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
 
@@ -266,9 +266,11 @@ def main(args):
         analyze_data_size(config['dataset'], split_name=args.data_size, resized=args.resized)
 
     student_model_config = config.get('student_model', None)
-    if args.bottleneck_size is not None and student_model_config is not None:
+    if args.bottleneck_size is not None and (student_model_config is not None or
+                                             (model_config is not None and 'ext_config' in model_config['backbone'])):
         data_logger = DataLogger()
-        model = get_model(student_model_config, device, bottleneck_transformer=data_logger)
+        tmp_model_config = student_model_config if student_model_config is not None else model_config
+        model = get_model(tmp_model_config, device, bottleneck_transformer=data_logger)
         analyze_bottleneck_size(model, data_logger, device, config['dataset'], split_name=args.bottleneck_size)
 
     if student_model_config is not None:
