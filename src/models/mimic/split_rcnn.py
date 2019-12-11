@@ -193,9 +193,10 @@ class RcnnTail(nn.Module):
         if isinstance(self.sub_backbone.body, ExtIntermediateLayerGetter):
             sub_features, ext_logits = features
             if not self.training and sub_features is None:
+                height, width = image_sizes[0]
                 pred_dict = {'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
-                             'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
-                             'keypoints_scores': torch.empty(0, 17)}
+                             'scores': torch.empty(0), 'masks': torch.zeros(100, 3, height, width),
+                             'keypoints': torch.empty(0, 17, 3), 'keypoints_scores': torch.empty(0, 17)}
                 return [pred_dict]
 
         if isinstance(features, torch.Tensor):

@@ -219,13 +219,14 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         head_proc_time = time.time() - head_start_time
         head_proc_time_list.append(head_proc_time)
         if head_output is None or tail_model is None:
+            tail_proc_time = 0.0
             if head_output is None:
                 filtered_count += 1
-
-            tail_proc_time = 0.0
-            outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
-                        'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
-                        'keypoints_scores': torch.empty(0, 17)}]
+            else:
+                ch, height, width = images[0].shape
+                outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
+                            'scores': torch.empty(0), 'masks': torch.zeros(100, ch, height, width),
+                            'keypoints': torch.empty(0, 17, 3), 'keypoints_scores': torch.empty(0, 17)}]
         else:
             tail_start_time = time.time()
             outputs = tail_model(*head_output)
