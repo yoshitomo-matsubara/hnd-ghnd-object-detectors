@@ -16,6 +16,8 @@ def get_argparser():
     argparser.add_argument('--json', help='dictionary to overwrite config')
     argparser.add_argument('-distill', action='store_true', help='distill a teacher model')
     argparser.add_argument('-skip_teacher_eval', action='store_true', help='skip teacher model evaluation in testing')
+    argparser.add_argument('-use_bottleneck_transformer', action='store_true',
+                           help='use bottleneck transformer (if defined in yaml) in testing')
     # distributed training parameters
     argparser.add_argument('--world_size', default=1, type=int, help='number of distributed processes')
     argparser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
@@ -61,6 +63,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
     optimizer = func_util.get_optimizer(student_model, optim_config['type'], optim_config['params'])
     scheduler_config = train_config['scheduler']
     lr_scheduler = func_util.get_scheduler(optimizer, scheduler_config['type'], scheduler_config['params'])
+    use_bottleneck_transformer = args.use_bottleneck_transformer
     best_val_map = 0.0
     if file_util.check_if_exists(ckpt_file_path):
         best_val_map, _, _ = load_ckpt(ckpt_file_path, optimizer=optimizer, lr_scheduler=lr_scheduler)
@@ -75,8 +78,10 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         student_model.train()
         teacher_model.distill_backbone_only = distill_backbone_only
         student_model.distill_backbone_only = distill_backbone_only
+        student_model.backbone.body.layer1.encoder.use_bottleneck_transformer = False
         distill_model(distillation_box, train_data_loader, optimizer, log_freq, device, epoch)
         student_model.distill_backbone_only = False
+        student_model.backbone.body.layer1.encoder.use_bottleneck_transformer = use_bottleneck_transformer
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
@@ -87,9 +92,10 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         lr_scheduler.step()
 
 
-def evaluate(teacher_model, student_model, test_data_loader, device, student_only):
+def evaluate(teacher_model, student_model, test_data_loader, device, student_only, use_bottleneck_transformer):
     teacher_model.distill_backbone_only = False
     student_model.distill_backbone_only = False
+    student_model.backbone.body.layer1.encoder.use_bottleneck_transformer = use_bottleneck_transformer
     if not student_only:
         print('[Teacher model]')
         main_util.evaluate(teacher_model, test_data_loader, device=device)
@@ -118,7 +124,8 @@ def main(args):
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
                 device, distributed, distill_backbone_only, config, args)
         load_ckpt(config['student_model']['ckpt'], model=student_model)
-    evaluate(teacher_model, student_model, test_data_loader, device, args.skip_teacher_eval)
+    evaluate(teacher_model, student_model, test_data_loader, device,
+             args.skip_teacher_eval, args.use_bottleneck_transformer)
 
 
 if __name__ == '__main__':
