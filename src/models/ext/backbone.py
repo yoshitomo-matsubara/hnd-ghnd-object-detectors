@@ -101,8 +101,13 @@ class ExtBackboneWithFPN(nn.Module):
             extra_blocks=LastLevelMaxPool(),
         )
         self.out_channels = out_channels
+        self.split = False
 
     def forward(self, x):
+        if self.split:
+            z = self.body(x)
+            return self.fpn(z)
+
         z, ext_z = self.body(x)
         if (not self.training and z is None) or self.body.ext_training:
             return None, ext_z

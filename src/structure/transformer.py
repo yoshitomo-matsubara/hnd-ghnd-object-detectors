@@ -74,14 +74,20 @@ class DataLogger(object):
         self.tensor_shape_list.clear()
 
     def __call__(self, z, target):
-        data_size = file_util.get_binary_object_size(z)
-        fp16_data_size = None if not isinstance(z, torch.Tensor) else file_util.get_binary_object_size(z.short())
-        quantized_data_size = None if not isinstance(z, torch.Tensor)\
-            else file_util.get_binary_object_size(tensor_util.quantize_tensor(z, num_bits=self.num_bits4quant))
+        if z is None:
+            data_size = 0.0
+            fp16_data_size = 0.0
+            quantized_data_size = 0.0
+        else:
+            data_size = file_util.get_binary_object_size(z)
+            fp16_data_size = None if not isinstance(z, torch.Tensor) else file_util.get_binary_object_size(z.short())
+            quantized_data_size = None if not isinstance(z, torch.Tensor)\
+                else file_util.get_binary_object_size(tensor_util.quantize_tensor(z, num_bits=self.num_bits4quant))
+
         self.data_size_list.append(data_size)
         self.fp16_data_size_list.append(fp16_data_size)
         self.quantized_data_size_list.append(quantized_data_size)
-        self.tensor_shape_list.append([z.shape[1], z.shape[2], z.shape[3]])
+        self.tensor_shape_list.append([0, 0, 0] if z is None else [z.shape[1], z.shape[2], z.shape[3]])
         return z, target
 
 

@@ -115,9 +115,10 @@ class CustomRCNN(nn.Module):
             if self.ext_training:
                 return ext_logits
             elif not self.training and features is None:
+                ch, height, width = images.tensors.shape[1:]
                 pred_dict = {'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
-                             'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
-                             'keypoints_scores': torch.empty(0, 17)}
+                             'scores': torch.empty(0), 'masks': torch.zeros(100, ch, height, width),
+                             'keypoints': torch.empty(0, 17, 3), 'keypoints_scores': torch.empty(0, 17)}
                 return [pred_dict]
 
         if isinstance(features, torch.Tensor):

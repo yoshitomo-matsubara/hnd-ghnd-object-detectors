@@ -219,27 +219,33 @@ def analyze_split_model_inference(model, device, quantization, head_only, datase
         head_proc_time = time.time() - head_start_time
         head_proc_time_list.append(head_proc_time)
         if head_output is None or tail_model is None:
+            tail_proc_time = 0.0
             if head_output is None:
                 filtered_count += 1
-
-            tail_proc_time = 0.0
-            outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
-                        'scores': torch.empty(0), 'keypoints': torch.empty(0, 17, 3),
-                        'keypoints_scores': torch.empty(0, 17)}]
+                ch, height, width = images[0].shape
+                outputs = [{'boxes': torch.empty(0, 4), 'labels': torch.empty(0, dtype=torch.int64),
+                            'scores': torch.empty(0), 'masks': torch.zeros(100, ch, height, width),
+                            'keypoints': torch.empty(0, 17, 3), 'keypoints_scores': torch.empty(0, 17)}]
+            else:
+                outputs = None
         else:
             tail_start_time = time.time()
             outputs = tail_model(*head_output)
             outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
             tail_proc_time = time.time() - tail_start_time
 
-        res = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
-        coco_evaluator.update(res)
+        if outputs is not None:
+            res = {target['image_id'].item(): output for target, output in zip(targets, outputs)}
+            coco_evaluator.update(res)
+
         tail_proc_time_list.append(tail_proc_time)
         total_proc_time_list.append(head_proc_time + tail_proc_time)
 
-    coco_evaluator.synchronize_between_processes()
-    coco_evaluator.accumulate()
-    coco_evaluator.summarize()
+    if not head_only:
+        coco_evaluator.synchronize_between_processes()
+        coco_evaluator.accumulate()
+        coco_evaluator.summarize()
+
     print('{} / {} images were filtered away by head model'.format(filtered_count, len(head_proc_time_list)))
     summarize_inference_time(head_proc_time_list, tail_proc_time_list, total_proc_time_list)
 
@@ -260,9 +266,11 @@ def main(args):
         analyze_data_size(config['dataset'], split_name=args.data_size, resized=args.resized)
 
     student_model_config = config.get('student_model', None)
-    if args.bottleneck_size is not None and student_model_config is not None:
+    if args.bottleneck_size is not None and (student_model_config is not None or
+                                             (model_config is not None and 'ext_config' in model_config['backbone'])):
         data_logger = DataLogger()
-        model = get_model(student_model_config, device, bottleneck_transformer=data_logger)
+        tmp_model_config = student_model_config if student_model_config is not None else model_config
+        model = get_model(tmp_model_config, device, bottleneck_transformer=data_logger)
         analyze_bottleneck_size(model, data_logger, device, config['dataset'], split_name=args.bottleneck_size)
 
     if student_model_config is not None:
