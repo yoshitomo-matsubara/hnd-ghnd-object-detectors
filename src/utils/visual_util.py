@@ -1,3 +1,4 @@
+# Modified version of https://gist.github.com/fmassa/d802c684512bcc99f54b714f10c96872
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
