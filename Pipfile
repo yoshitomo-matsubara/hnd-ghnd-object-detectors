@@ -13,6 +13,7 @@ pycocotools = "*"
 cython = "*"
 scikit-learn = "*"
 pandas = "*"
+opencv-python = "*"
 
 [dev-packages]
 

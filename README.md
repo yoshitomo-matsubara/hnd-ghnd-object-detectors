@@ -39,4 +39,5 @@ The default hyperparameters are tuned for training on 8 gpus and 2 images per gp
 If you use different number of gpus, the learning rate should be changed to 0.02/8*$NGPU.
 
 ## References
--  [pytorch/vision/references/detection/](https://github.com/pytorch/vision/tree/master/references/detection)
+- [pytorch/vision/references/detection/](https://github.com/pytorch/vision/tree/master/references/detection)
+- [code for visualization in the object detection tutorial](https://github.com/pytorch/vision/issues/1610)
