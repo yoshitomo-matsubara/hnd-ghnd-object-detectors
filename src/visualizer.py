@@ -50,7 +50,7 @@ def main(args):
     device = torch.device(args.device)
     print(args)
     print('Creating model')
-    model_config = config['model'] if 'model' in config else config.get('student', None)
+    model_config = config['model'] if 'model' in config else config.get('student_model', None)
     if model_config is None:
         raise ValueError('`{}` should contain model or student config at root'.format(args.config))
 
