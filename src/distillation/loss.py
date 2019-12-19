@@ -31,7 +31,7 @@ class GeneralizedCustomLoss(CustomLoss):
         sub_total_loss = sum(loss for loss in loss_dict.values())
         if self.org_loss_factor == 0:
             return sub_total_loss
-        return sub_total_loss + sum(loss for loss in org_loss_dict.values())
+        return sub_total_loss + self.org_loss_factor * sum(loss for loss in org_loss_dict.values())
 
 
 class HKDLoss4RCNN(CustomLoss):
