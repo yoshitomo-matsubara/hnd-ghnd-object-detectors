@@ -35,7 +35,7 @@ class DistillationBox(nn.Module):
             student_module.register_forward_hook(extract_output)
 
         self.criterion = get_loss(criterion_config)
-        self.require_adjustment = isinstance(self.student_model, KeypointRCNN)
+        self.require_adjustment = isinstance(student_model_without_ddp, KeypointRCNN)
 
     def forward(self, images, targets):
         teacher_model_without_dp =\
