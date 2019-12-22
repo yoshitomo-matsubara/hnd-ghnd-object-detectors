@@ -1,6 +1,8 @@
 import argparse
 
 import torch
+from torch.nn import DataParallel
+from torch.nn.parallel.distributed import DistributedDataParallel
 
 from distillation.tool import DistillationBox
 from models import load_ckpt, get_model, save_ckpt
@@ -70,32 +72,38 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
 
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
+    teacher_model_without_dp = teacher_model.module if isinstance(teacher_model, DataParallel) else teacher_model
+    student_model_without_ddp =\
+        student_model.module if isinstance(student_model, DistributedDataParallel) else student_model
     for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
 
         teacher_model.eval()
         student_model.train()
-        teacher_model.distill_backbone_only = distill_backbone_only
-        student_model.distill_backbone_only = distill_backbone_only
-        student_model.backbone.body.layer1.use_bottleneck_transformer = False
+        teacher_model_without_dp.distill_backbone_only = distill_backbone_only
+        student_model_without_ddp.distill_backbone_only = distill_backbone_only
+        student_model_without_ddp.backbone.body.layer1.use_bottleneck_transformer = False
         distill_model(distillation_box, train_data_loader, optimizer, log_freq, device, epoch)
-        student_model.distill_backbone_only = False
-        student_model.backbone.body.layer1.use_bottleneck_transformer = use_bottleneck_transformer
+        student_model_without_ddp.distill_backbone_only = False
+        student_model_without_ddp.backbone.body.layer1.use_bottleneck_transformer = use_bottleneck_transformer
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
         if val_map > best_val_map:
             print('Updating ckpt (Best BBox mAP: {:.4f} -> {:.4f})'.format(best_val_map, val_map))
             best_val_map = val_map
-            save_ckpt(student_model, optimizer, lr_scheduler, best_val_map, config, args, ckpt_file_path)
+            save_ckpt(student_model_without_ddp, optimizer, lr_scheduler, best_val_map, config, args, ckpt_file_path)
         lr_scheduler.step()
 
 
 def evaluate(teacher_model, student_model, test_data_loader, device, student_only, use_bottleneck_transformer):
-    teacher_model.distill_backbone_only = False
-    student_model.distill_backbone_only = False
-    student_model.backbone.body.layer1.use_bottleneck_transformer = use_bottleneck_transformer
+    teacher_model_without_dp = teacher_model.module if isinstance(teacher_model, DataParallel) else teacher_model
+    student_model_without_ddp =\
+        student_model.module if isinstance(student_model, DistributedDataParallel) else student_model
+    teacher_model_without_dp.distill_backbone_only = False
+    student_model_without_ddp.distill_backbone_only = False
+    student_model_without_ddp.backbone.body.layer1.use_bottleneck_transformer = use_bottleneck_transformer
     if not student_only:
         print('[Teacher model]')
         main_util.evaluate(teacher_model, test_data_loader, device=device)
@@ -109,7 +117,7 @@ def main(args):
     if args.json is not None:
         main_util.overwrite_config(config, args.json)
 
-    distributed, _ = main_util.init_distributed_mode(args.world_size, args.dist_url)
+    distributed, device_ids = main_util.init_distributed_mode(args.world_size, args.dist_url)
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     teacher_model = get_model(config['teacher_model'], device)
     student_model_config = config['student_model']
@@ -120,6 +128,10 @@ def main(args):
     train_config = config['train']
     train_sampler, train_data_loader, val_data_loader, test_data_loader = \
         data_util.get_coco_data_loaders(config['dataset'], train_config['batch_size'], distributed)
+    if distributed:
+        teacher_model = DataParallel(teacher_model, device_ids=device_ids)
+        student_model = DistributedDataParallel(student_model, device_ids=device_ids)
+
     if args.distill:
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
                 device, distributed, distill_backbone_only, config, args)
