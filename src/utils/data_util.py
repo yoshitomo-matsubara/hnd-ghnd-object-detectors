@@ -26,10 +26,12 @@ def get_coco_data_loaders(dataset_config, batch_size, distributed):
     print('Creating data loaders')
     if distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        test_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+        test_sampler = torch.utils.data.distributed.DistributedSampler(test_dataset)
     else:
         train_sampler = torch.utils.data.RandomSampler(train_dataset)
-        test_sampler = torch.utils.data.SequentialSampler(val_dataset)
+        val_sampler = torch.utils.data.SequentialSampler(val_dataset)
+        test_sampler = torch.utils.data.SequentialSampler(test_dataset)
 
     if aspect_ratio_group_factor >= 0:
         group_ids = create_aspect_ratio_groups(train_dataset, k=aspect_ratio_group_factor)
@@ -39,7 +41,7 @@ def get_coco_data_loaders(dataset_config, batch_size, distributed):
 
     train_data_loader = torch.utils.data.DataLoader(train_dataset, batch_sampler=train_batch_sampler,
                                                     num_workers=num_workers, collate_fn=misc_util.collate_fn)
-    val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, sampler=test_sampler,
+    val_data_loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, sampler=val_sampler,
                                                   num_workers=num_workers, collate_fn=misc_util.collate_fn)
     test_data_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, sampler=test_sampler,
                                                    num_workers=num_workers, collate_fn=misc_util.collate_fn)
