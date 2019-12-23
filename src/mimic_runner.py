@@ -90,7 +90,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
         coco_evaluator = main_util.evaluate(student_model, val_data_loader, device=device)
         # Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ]
         val_map = coco_evaluator.coco_eval['bbox'].stats[0]
-        if val_map > best_val_map:
+        if val_map > best_val_map and misc_util.is_main_process():
             print('Updating ckpt (Best BBox mAP: {:.4f} -> {:.4f})'.format(best_val_map, val_map))
             best_val_map = val_map
             save_ckpt(student_model_without_ddp, optimizer, lr_scheduler, best_val_map, config, args, ckpt_file_path)
