@@ -135,7 +135,8 @@ def main(args):
     if args.distill:
         distill(teacher_model, student_model, train_sampler, train_data_loader, val_data_loader,
                 device, distributed, distill_backbone_only, config, args)
-        load_ckpt(config['student_model']['ckpt'], model=student_model)
+        load_ckpt(config['student_model']['ckpt'],
+                  model=student_model.module if isinstance(student_model, DistributedDataParallel) else student_model)
     evaluate(teacher_model, student_model, test_data_loader, device,
              args.skip_teacher_eval, args.transform_bottleneck)
 
