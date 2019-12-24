@@ -120,6 +120,7 @@ def main(args):
     distributed, device_ids = main_util.init_distributed_mode(args.world_size, args.dist_url)
     device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
     teacher_model = get_model(config['teacher_model'], device)
+    module_util.freeze_module_params(teacher_model)
     student_model_config = config['student_model']
     student_model = get_model(student_model_config, device)
     freeze_modules(student_model, student_model_config)
