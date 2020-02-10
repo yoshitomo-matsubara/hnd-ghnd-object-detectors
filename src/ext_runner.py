@@ -7,8 +7,8 @@ import time
 import numpy as np
 import pandas as pd
 import torch
-import torch.utils.data
 from sklearn import metrics
+from torch import distributed as dist
 from torch import nn
 
 from models import get_model, load_ckpt, save_ckpt
@@ -134,6 +134,7 @@ def train(model, ext_classifier, train_sampler, train_data_loader, val_data_load
 
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
+    start_time = time.time()
     for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
@@ -147,6 +148,11 @@ def train(model, ext_classifier, train_sampler, train_data_loader, val_data_load
             print('Updating ckpt (Best ROC-AUC: {:.4f} -> {:.4f})'.format(best_val_roc_auc, val_roc_auc))
             best_val_roc_auc = val_roc_auc
             save_ckpt(ext_classifier, optimizer, lr_scheduler, best_val_roc_auc, config, args, ckpt_file_path)
+
+    dist.barrier()
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print('Training time {}'.format(total_time_str))
 
 
 def main(args):
