@@ -1,6 +1,9 @@
 import argparse
+import datetime
+import time
 
 import torch
+from torch import distributed as dist
 from torch.nn import DataParallel
 from torch.nn.parallel.distributed import DistributedDataParallel
 
@@ -75,6 +78,7 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
     teacher_model_without_dp = teacher_model.module if isinstance(teacher_model, DataParallel) else teacher_model
     student_model_without_ddp =\
         student_model.module if isinstance(student_model, DistributedDataParallel) else student_model
+    start_time = time.time()
     for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
@@ -95,6 +99,11 @@ def distill(teacher_model, student_model, train_sampler, train_data_loader, val_
             best_val_map = val_map
             save_ckpt(student_model_without_ddp, optimizer, lr_scheduler, best_val_map, config, args, ckpt_file_path)
         lr_scheduler.step()
+
+    dist.barrier()
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print('Training time {}'.format(total_time_str))
 
 
 def evaluate(teacher_model, student_model, test_data_loader, device, student_only, use_bottleneck_transformer):

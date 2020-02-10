@@ -5,7 +5,7 @@ import sys
 import time
 
 import torch
-import torch.utils.data
+from torch import distributed as dist
 from torch import nn
 
 from models import get_model, load_ckpt, save_ckpt
@@ -75,6 +75,7 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
 
     num_epochs = train_config['num_epochs']
     log_freq = train_config['log_freq']
+    start_time = time.time()
     for epoch in range(num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
@@ -91,6 +92,11 @@ def train(model, train_sampler, train_data_loader, val_data_loader, device, dist
             best_val_map = val_map
             save_ckpt(model, optimizer, lr_scheduler, best_val_map, config, args, ckpt_file_path)
         lr_scheduler.step()
+
+    dist.barrier()
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print('Training time {}'.format(total_time_str))
 
 
 def main(args):
