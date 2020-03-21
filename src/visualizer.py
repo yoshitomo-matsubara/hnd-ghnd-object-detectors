@@ -14,8 +14,7 @@ def get_argparser():
     argparser.add_argument('--config', required=True, help='yaml config file')
     argparser.add_argument('--device', default='cuda', help='device')
     argparser.add_argument('--json', help='dictionary to overwrite config')
-    argparser.add_argument('--image', default=True, nargs='+',
-                           help='image dir/file paths for visualization (prioritized if given)')
+    argparser.add_argument('--image', default=True, nargs='+', help='image dir/file paths for visualization')
     argparser.add_argument('--output', required=True, help='output dir path')
     return argparser
 

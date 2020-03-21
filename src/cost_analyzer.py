@@ -137,6 +137,7 @@ def analyze_data_size(dataset_config, split_name='test', resized=False):
     summarize_tensor_shape(channel_list, height_list, width_list)
 
 
+@torch.no_grad()
 def analyze_bottleneck_size(model, data_size_logger, device, dataset_config, split_name='test'):
     print('Analyzing size of bottleneck in model for {} dataset'.format(split_name))
     split_config = dataset_config['splits'][split_name]
@@ -187,6 +188,7 @@ def summarize_inference_time(head_proc_times, tail_proc_times, total_proc_times)
     print('Total model delay:\t{:.4f} ± {:.4f} [sec]'.format(total_proc_times.mean(), total_proc_times.std()))
 
 
+@torch.no_grad()
 def analyze_split_model_inference(model, device, quantization, head_only, dataset_config, split_name='test'):
     head_model, tail_model = split_rcnn_model(model, quantization)
     head_model.eval()
