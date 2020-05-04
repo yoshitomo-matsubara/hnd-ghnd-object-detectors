@@ -32,7 +32,7 @@ model:
                 bottleneck_channel: 3
         ext_config:
             backbone_frozen: True
-            threshold: 0.5
+            threshold: 0.01
             ckpt: !join ['./resource/ckpt/ext/', *dataset_name, '-', *model_name, '-backbone_ext_', *backbone_name ,'.pt']
     bottleneck_transformer:
         order: ['quantizer', 'dequantizer']
