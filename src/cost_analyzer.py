@@ -273,6 +273,7 @@ def main(args):
         data_logger = DataLogger()
         tmp_model_config = student_model_config if student_model_config is not None else model_config
         model = get_model(tmp_model_config, device, bottleneck_transformer=data_logger)
+        model.backbone.body.layer1.use_bottleneck_transformer = True
         analyze_bottleneck_size(model, data_logger, device, config['dataset'], split_name=args.bottleneck_size)
 
     if student_model_config is not None:
