@@ -27,17 +27,6 @@ unzip -q val2017.zip
 unzip -q annotations_trainval2017.zip
 ```
 
-## Note from torchvision reference
-PyTorch Detection Training.
-
-To run in a multi-gpu environment, use the distributed launcher::
-```
-pipenv run python -m torch.distributed.launch --nproc_per_node=$NGPU --use_env src/coco_runner.py ... --world-size $NGPU
-```
-The default hyperparameters are tuned for training on 8 gpus and 2 images per gpu.
-    --lr 0.02 --batch-size 2 --world-size 8  
-If you use different number of gpus, the learning rate should be changed to 0.02/8*$NGPU.
-
 ## References
 - [pytorch/vision/references/detection/](https://github.com/pytorch/vision/tree/master/references/detection)
 - [code for visualization in the object detection tutorial](https://github.com/pytorch/vision/issues/1610)
