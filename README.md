@@ -13,6 +13,7 @@ git submodule init
 git submodule update --recursive --remote
 pipenv install
 ```
+It is not necessary to use pipenv, and you can instead manually install the required packages listed in [Pipfile](Pipfile), using pip3
 
 ## Dataset
 COCO 2017
