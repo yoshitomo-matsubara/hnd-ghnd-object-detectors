@@ -1,4 +1,5 @@
 # HND & GHND for Object Detectors
+Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs
 
 ## Citations
 ```bibtex
@@ -48,6 +49,10 @@ unzip -q train2017.zip
 unzip -q val2017.zip
 unzip -q annotations_trainval2017.zip
 ```
+
+## Checkpoints with trained model weights
+1. Download ***emdl2020.zip*** [here](https://drive.google.com/file/d/1l1RHT_BhTJ_yh-z5L4x04Nj2-Oe4w9C1/view?usp=sharing)
+2. Unzip ***emdl2020.zip*** at a directory containing README.md so that you can use the checkpoints with yaml config files under [onfig/hnd/](config/hnd/)
 
 ## References
 - [pytorch/vision/references/detection/](https://github.com/pytorch/vision/tree/master/references/detection)
