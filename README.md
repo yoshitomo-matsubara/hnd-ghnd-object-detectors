@@ -1,4 +1,25 @@
-# Distilled Object Detector
+# HND & GHND for Object Detectors
+
+## Citations
+```bibtex
+@article{matsubara2020split,
+    title={Split Computing for Complex Object Detectors: Challenges and Preliminary Results},
+    author={Matsubara, Yoshitomo and Levorato, Marco},
+    year={2020},
+    eprint={},
+    archivePrefix={arXiv},
+    primaryClass={cs.ML}
+}
+
+@article{matsubara2020neural,
+    title={Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks},
+    author={Matsubara, Yoshitomo and Levorato, Marco},
+    year={2020},
+    eprint={},
+    archivePrefix={arXiv},
+    primaryClass={cs.ML}
+}
+```
 
 ## Requirements
 - Python 3.6
@@ -7,8 +28,8 @@
 
 ## How to clone
 ```
-git clone https://github.com/yoshitomo-matsubara/distilled-object-detector.git
-cd distilled-object-detector/
+git clone https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors.git
+cd hnd-ghnd-object-detectors/
 git submodule init
 git submodule update --recursive --remote
 pipenv install
