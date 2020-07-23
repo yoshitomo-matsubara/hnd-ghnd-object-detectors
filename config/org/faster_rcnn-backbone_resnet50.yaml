@@ -46,7 +46,7 @@ train:
     scheduler:
         type: 'MultiStepLR'
         params:
-            milestones: [36, 43]
+            milestones: [16, 22]
             gamma: 0.1
 
 test:
