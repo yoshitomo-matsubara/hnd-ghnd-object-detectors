@@ -57,7 +57,7 @@ student_model:
         pretrained: True
     distill_backbone_only: True
     frozen_modules: ['backbone.body.layer2', 'backbone.body.layer3', 'backbone.body.layer4', 'backbone.fpn', 'rpn', 'roi_heads']
-        experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name, '-b', *bch, 'ch']
+    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name, '-b', *bch, 'ch']
     ckpt: !join ['./resource/ckpt/hnd/', *student_experiment, '.pt']
 
 train:
