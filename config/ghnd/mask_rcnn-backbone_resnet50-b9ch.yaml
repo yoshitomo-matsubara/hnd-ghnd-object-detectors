@@ -42,7 +42,7 @@ student_model:
             freeze_layers: False
             layer1:
                 name: 'Bottleneck4LargeResNet'
-                bottleneck_channel: 3
+                bottleneck_channel: &bch 9
     bottleneck_transformer:
         order: ['quantizer', 'dequantizer']
         components:
@@ -57,12 +57,12 @@ student_model:
         pretrained: True
     distill_backbone_only: True
     frozen_modules: ['backbone.body.layer2', 'backbone.body.layer3', 'backbone.body.layer4', 'backbone.fpn', 'rpn', 'roi_heads']
-    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name]
-    ckpt: !join ['./resource/ckpt/mimic/', *student_experiment, '.pt']
+    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name, '-b', *bch, 'ch']
+    ckpt: !join ['./resource/ckpt/ghnd/', *student_experiment, '.pt']
 
 train:
     num_epochs: 20
-    batch_size: 1
+    batch_size: 4
     log_freq: 1000
     optimizer:
         type: 'Adam'
