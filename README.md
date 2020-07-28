@@ -1,15 +1,18 @@
 # HND & GHND for Object Detectors
-Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs
+Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs.  
+- "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
+[[Preprint](https://arxiv.org/abs/2007.13312)]
+
 
 ## Citations
 ```bibtex
-@article{matsubara2020split,
+@misc{matsubara2020split,
     title={Split Computing for Complex Object Detectors: Challenges and Preliminary Results},
-    author={Matsubara, Yoshitomo and Levorato, Marco},
+    author={Yoshitomo Matsubara and Marco Levorato},
     year={2020},
-    eprint={},
+    eprint={2007.13312},
     archivePrefix={arXiv},
-    primaryClass={cs.ML}
+    primaryClass={cs.CV}
 }
 ```
 
@@ -42,7 +45,7 @@ unzip -q annotations_trainval2017.zip
 ```
 
 ## Checkpoints with trained model weights
-1. Download **emdl2020.zip** [here](https://drive.google.com/file/d/1l1RHT_BhTJ_yh-z5L4x04Nj2-Oe4w9C1/view?usp=sharing)
+1. Download **emdl2020.zip** [here](https://drive.google.com/file/d/1lMwkaoxhnw260FgZoTLvWRZXajlSxKtN/view?usp=sharing)
 2. Unzip **emdl2020.zip** at the root directory of this repository so that you can use the checkpoints with yaml config files under [config/hnd/](config/hnd/)
 3. Test the trained models using the checkpoints and yaml config files  
 e.g., Faster R-CNN with 3 output channels for bottleneck

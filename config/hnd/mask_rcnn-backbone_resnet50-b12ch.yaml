@@ -42,7 +42,7 @@ student_model:
             freeze_layers: False
             layer1:
                 name: 'Bottleneck4LargeResNet'
-                bottleneck_channel: &bch 9
+                bottleneck_channel: &bch 12
     bottleneck_transformer:
         order: ['quantizer', 'dequantizer']
         components:

@@ -21,7 +21,7 @@ dataset:
             jpeg_quality:
 
 teacher_model:
-    name: &teacher_model_name 'mask_rcnn'
+    name: &teacher_model_name 'faster_rcnn'
     backbone:
         name: &teacher_backbone_name 'resnet50'
         params:
@@ -34,7 +34,7 @@ teacher_model:
     ckpt: !join ['./resource/ckpt/org/', *teacher_experiment, '.pt']
 
 student_model:
-    name: &student_model_name 'mask_rcnn'
+    name: &student_model_name 'faster_rcnn'
     backbone:
         name: &student_backbone_name 'custom_resnet50'
         params:
@@ -42,7 +42,7 @@ student_model:
             freeze_layers: False
             layer1:
                 name: 'Bottleneck4LargeResNet'
-                bottleneck_channel: &bch 9
+                bottleneck_channel: &bch 12
     bottleneck_transformer:
         order: ['quantizer', 'dequantizer']
         components:
