@@ -2,6 +2,8 @@
 Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs  
 - "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
 [[Preprint](https://arxiv.org/abs/2007.13312)]
+- "Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks," [ICPR 2020](https://www.micc.unifi.it/icpr2020/)  
+[[Preprint]()]
 
 
 ## Citations
@@ -47,10 +49,13 @@ unzip -q annotations_trainval2017.zip
 ## Checkpoints with trained model weights
 1. Download **emdl2020.zip** [here](https://drive.google.com/file/d/1lMwkaoxhnw260FgZoTLvWRZXajlSxKtN/view?usp=sharing)
 2. Unzip **emdl2020.zip** at the root directory of this repository so that you can use the checkpoints with yaml config files under [config/hnd/](config/hnd/)
-3. Test the trained models using the checkpoints and yaml config files  
+3. Download **icpr2020.zip** [here](https://drive.google.com/file/d/1K7MNVuW99uDMHciewVS71hks_YdU9_2A/view?usp=sharing)
+4. Unzip **icpr2020.zip** at the root directory of this repository so that you can use the checkpoints with yaml config files under [config/hnd/](config/hnd/) and [config/ghnd/](config/ghnd/)
+5. Test the trained models using the checkpoints and yaml config files  
 e.g., Faster R-CNN with 3 output channels for bottleneck
 ```
 pipenv run python src/coco_runner.py --config config/hnd/faster_rcnn-backbone_resnet50-b3ch.yaml
+pipenv run python src/coco_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml
 ```
 
 ## References
