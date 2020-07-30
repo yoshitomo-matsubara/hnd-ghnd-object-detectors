@@ -241,7 +241,7 @@ def get_coco(img_dir_path, ann_file_path, transforms, remove_non_annotated_imgs,
         t.append(transforms)
 
     transforms = Compose(t)
-    dataset = ExtCocoDetection(os.path.expanduser(img_dir_path), ann_file_path,
+    dataset = ExtCocoDetection(os.path.expanduser(img_dir_path), os.path.expanduser(ann_file_path),
                                transforms=transforms, jpeg_quality=jpeg_quality)
     if remove_non_annotated_imgs:
         dataset = remove_images_without_annotations(dataset)
