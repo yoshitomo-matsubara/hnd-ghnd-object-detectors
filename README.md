@@ -1,13 +1,22 @@
 # HND & GHND for Object Detectors
 Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs  
+- "Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks," [ICPR 2020](https://www.micc.unifi.it/icpr2020/)  
+[[Preprint](https://arxiv.org/abs/2007.15818)]
 - "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
 [[Preprint](https://arxiv.org/abs/2007.13312)]
-- "Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks," [ICPR 2020](https://www.micc.unifi.it/icpr2020/)  
-[[Preprint]()]
 
 
 ## Citations
 ```bibtex
+@misc{matsubara2020neural,
+    title={Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks},
+    author={Yoshitomo Matsubara and Marco Levorato},
+    year={2020},
+    eprint={2007.15818},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
+}
+
 @misc{matsubara2020split,
     title={Split Computing for Complex Object Detectors: Challenges and Preliminary Results},
     author={Yoshitomo Matsubara and Marco Levorato},
@@ -16,6 +25,7 @@ Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoi
     archivePrefix={arXiv},
     primaryClass={cs.CV}
 }
+
 ```
 
 ## Requirements
@@ -33,8 +43,7 @@ pipenv install
 ```
 It is not necessary to use pipenv, and you can instead manually install the required packages listed in [Pipfile](Pipfile), using pip3
 
-## Dataset
-COCO 2017
+## COCO 2017 Dataset
 ```
 mkdir -p ./resource/dataset/coco2017
 cd ./resource/dataset/coco2017
