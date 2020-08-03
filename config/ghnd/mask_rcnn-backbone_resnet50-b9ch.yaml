@@ -1,0 +1,111 @@
+dataset:
+    name: &dataset_name 'coco2017'
+    root: &root_dir !join ['./resource/dataset/', *dataset_name]
+    num_workers: 4
+    aspect_ratio_group_factor: 3
+    splits:
+        train:
+            images: !join [*root_dir, '/train2017']
+            annotations: !join [*root_dir, '/annotations/instances_train2017.json']
+            remove_non_annotated_imgs: True
+            jpeg_quality:
+        val:
+            images: !join [*root_dir, '/val2017']
+            annotations: !join [*root_dir, '/annotations/instances_val2017.json']
+            remove_non_annotated_imgs: False
+            jpeg_quality:
+        test:
+            images: !join [*root_dir, '/val2017']
+            annotations: !join [*root_dir, '/annotations/instances_val2017.json']
+            remove_non_annotated_imgs: False
+            jpeg_quality:
+
+teacher_model:
+    name: &teacher_model_name 'mask_rcnn'
+    backbone:
+        name: &teacher_backbone_name 'resnet50'
+        params:
+            pretrained: True
+            freeze_layers: True
+    params:
+        num_classes: 91
+        pretrained: True
+    experiment: &teacher_experiment !join [*dataset_name, '-', *teacher_model_name, '-backbone_', *teacher_backbone_name]
+    ckpt: !join ['./resource/ckpt/org/', *teacher_experiment, '.pt']
+
+student_model:
+    name: &student_model_name 'mask_rcnn'
+    backbone:
+        name: &student_backbone_name 'custom_resnet50'
+        params:
+            pretrained: True
+            freeze_layers: False
+            layer1:
+                name: 'Bottleneck4LargeResNet'
+                bottleneck_channel: &bch 9
+    bottleneck_transformer:
+        order: ['quantizer', 'dequantizer']
+        components:
+            quantizer:
+                params:
+                    num_bits: 8
+            dequantizer:
+                params:
+                    num_bits: 8
+    params:
+        num_classes: 91
+        pretrained: True
+    distill_backbone_only: True
+    frozen_modules: ['backbone.body.layer2', 'backbone.body.layer3', 'backbone.body.layer4', 'backbone.fpn', 'rpn', 'roi_heads']
+    experiment: &student_experiment !join [*dataset_name, '-', *student_model_name, '-backbone_', *student_backbone_name, '_from_', *teacher_model_name, '-backbone_', *teacher_backbone_name, '-b', *bch, 'ch']
+    ckpt: !join ['./resource/ckpt/ghnd/', *student_experiment, '.pt']
+
+train:
+    num_epochs: 20
+    batch_size: 4
+    log_freq: 1000
+    optimizer:
+        type: 'Adam'
+        params:
+            lr: 0.001
+    criterion:
+        type: 'general'
+        params:
+            org_loss_factor: 0.0
+        terms:
+            layer1:
+                ts_modules: ['backbone.body.layer1', 'backbone.body.layer1']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer2:
+                ts_modules: ['backbone.body.layer2', 'backbone.body.layer2']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer3:
+                ts_modules: ['backbone.body.layer3', 'backbone.body.layer3']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+            layer4:
+                ts_modules: ['backbone.body.layer4', 'backbone.body.layer4']
+                criterion:
+                    type: 'MSELoss'
+                    params:
+                        reduction: 'sum'
+                factor: 1.0
+    scheduler:
+        type: 'MultiStepLR'
+        params:
+            milestones: [5, 15]
+            gamma: 0.1
+
+test:
+    batch_size: 1
