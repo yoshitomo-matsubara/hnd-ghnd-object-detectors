@@ -62,8 +62,8 @@ unzip -q annotations_trainval2017.zip
 5. Test the trained models using the checkpoints and yaml config files  
 e.g., Faster R-CNN with 3 output channels for bottleneck
 ```
-pipenv run python src/coco_runner.py --config config/hnd/faster_rcnn-backbone_resnet50-b3ch.yaml
-pipenv run python src/coco_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml
+pipenv run python src/mimic_runner.py --config config/hnd/faster_rcnn-backbone_resnet50-b3ch.yaml
+pipenv run python src/mimic_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml
 ```
 
 ## References
