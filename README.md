@@ -66,9 +66,10 @@ pipenv run python src/mimic_runner.py --config config/hnd/faster_rcnn-backbone_r
 pipenv run python src/mimic_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml
 ```
 
-## Distilling head portion of bottleneck-injected R-CNNs
+## Distilling head portion of R-CNNs
 If you have already downloaded our trained model weights above, you should move the ckpt files in `resource/ckpt/` to somewhere else or change ckpt file path (`ckpt` under `student_model`) in config files.
-### Bottleneck-injected Faster R-CNN with ResNet50 and FPN
+
+### Bottleneck-injected Faster R-CNN with ResNet-50 and FPN
 e.g., Bottleneck with 3 output channels
 ```
 # HND
@@ -78,7 +79,7 @@ pipenv run python src/mimic_runner.py --config config/hnd/faster_rcnn-backbone_r
 pipenv run python src/mimic_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml -distill
 ```
 
-### Bottleneck-injected Mask R-CNN with ResNet50 and FPN
+### Bottleneck-injected Mask R-CNN with ResNet-50 and FPN
 e.g., Bottleneck with 3 output channels
 ```
 # HND
@@ -88,7 +89,7 @@ pipenv run python src/mimic_runner.py --config config/hnd/mask_rcnn-backbone_res
 pipenv run python src/mimic_runner.py --config config/ghnd/mask_rcnn-backbone_resnet50-b3ch.yaml -distill
 ```
 
-### Bottleneck-injected Keypoint R-CNN with ResNet50 and FPN
+### Bottleneck-injected Keypoint R-CNN with ResNet-50 and FPN
 e.g., Bottleneck with 3 output channels
 ```
 # HND
