@@ -40,7 +40,7 @@ git submodule init
 git submodule update --recursive --remote
 pipenv install
 ```
-It is not necessary to use pipenv, and you can instead manually install the required packages listed in [Pipfile](Pipfile), using pip3
+It is not necessary to use pipenv, and you can instead manually install the required packages listed in [Pipfile](Pipfile), using pip3.
 
 ## COCO 2017 Dataset
 ```
@@ -62,8 +62,46 @@ unzip -q annotations_trainval2017.zip
 5. Test the trained models using the checkpoints and yaml config files  
 e.g., Faster R-CNN with 3 output channels for bottleneck
 ```
-pipenv run python src/coco_runner.py --config config/hnd/faster_rcnn-backbone_resnet50-b3ch.yaml
-pipenv run python src/coco_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml
+pipenv run python src/mimic_runner.py --config config/hnd/faster_rcnn-backbone_resnet50-b3ch.yaml
+pipenv run python src/mimic_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml
+```
+
+## Distilling head portion of R-CNNs
+If you have already downloaded our trained model weights above, you should move the ckpt files in `resource/ckpt/` to somewhere else or change ckpt file path (`ckpt` under `student_model`) in config files.
+
+### Bottleneck-injected Faster R-CNN with ResNet-50 and FPN
+e.g., Bottleneck with 3 output channels
+```
+# HND
+pipenv run python src/mimic_runner.py --config config/hnd/faster_rcnn-backbone_resnet50-b3ch.yaml -distill
+
+# GHND
+pipenv run python src/mimic_runner.py --config config/ghnd/faster_rcnn-backbone_resnet50-b3ch.yaml -distill
+```
+
+### Bottleneck-injected Mask R-CNN with ResNet-50 and FPN
+e.g., Bottleneck with 3 output channels
+```
+# HND
+pipenv run python src/mimic_runner.py --config config/hnd/mask_rcnn-backbone_resnet50-b3ch.yaml -distill
+
+# GHND
+pipenv run python src/mimic_runner.py --config config/ghnd/mask_rcnn-backbone_resnet50-b3ch.yaml -distill
+```
+
+### Bottleneck-injected Keypoint R-CNN with ResNet-50 and FPN
+e.g., Bottleneck with 3 output channels
+```
+# HND
+pipenv run python src/mimic_runner.py --config config/hnd/keypoint_rcnn-backbone_resnet50-b3ch.yaml -distill
+
+# GHND
+pipenv run python src/mimic_runner.py --config config/ghnd/keypoint_rcnn-backbone_resnet50-b3ch.yaml -distill
+```
+
+## Training a neural filter on top of our trained, bottleneck-injected Keypoint R-CNN
+```
+pipenv run python src/ext_runner.py --config config/ext/keypoint_rcnn-backbone_ext_resnet50-b3ch.yaml -train
 ```
 
 ## References
