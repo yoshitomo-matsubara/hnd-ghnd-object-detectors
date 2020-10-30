@@ -5,6 +5,7 @@ Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoi
 - "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
 [[PDF (Open Access)](https://dl.acm.org/doi/abs/10.1145/3410338.3412338)] [[Preprint](https://arxiv.org/abs/2007.13312)]
 
+![GHND and Neural Filter](img/ghnd_and_nf.png) 
 
 ## Citations
 ```bibtex
