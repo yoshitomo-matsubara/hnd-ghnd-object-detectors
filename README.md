@@ -1,4 +1,4 @@
-# HND & GHND for Object Detectors
+HND & GHND for Object Detectors
 Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs  
 - "Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks," [ICPR 2020](https://www.micc.unifi.it/icpr2020/)  
 [[Preprint](https://arxiv.org/abs/2007.15818)]
