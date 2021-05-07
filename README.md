@@ -1,7 +1,7 @@
 # HND & GHND for Object Detectors
 Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs  
 - "Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks," [ICPR 2020](https://www.micc.unifi.it/icpr2020/)  
-[[Preprint](https://arxiv.org/abs/2007.15818)]
+[[PDF](https://ieeexplore.ieee.org/document/9412388)] [[Supp](https://ieeexplore.ieee.org/document/9412388/media#media)] [[Preprint](https://arxiv.org/abs/2007.15818)]
 - "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
 [[PDF (Open Access)](https://dl.acm.org/doi/abs/10.1145/3410338.3412338)] [[Preprint](https://arxiv.org/abs/2007.13312)]
 
@@ -9,13 +9,12 @@ Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoi
 
 ## Citations
 ```bibtex
-@misc{matsubara2020neural,
+@inproceedings{matsubara2021neural,
   title={Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks},
   author={Yoshitomo Matsubara and Marco Levorato},
-  year={2020},
-  eprint={2007.15818},
-  archivePrefix={arXiv},
-  primaryClass={cs.CV}
+  booktitle={2020 25th International Conference on Pattern Recognition (ICPR)},
+  pages={2272--2279},
+  year={2021}
 }
 
 @inproceedings{matsubara2020split,
