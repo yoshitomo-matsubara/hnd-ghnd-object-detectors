@@ -13,7 +13,7 @@ Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoi
   title={Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks},
   author={Yoshitomo Matsubara and Marco Levorato},
   booktitle={2020 25th International Conference on Pattern Recognition (ICPR)},
-  pages={2272-2279},
+  pages={2272--2279},
   year={2021}
 }
 
