@@ -2,7 +2,7 @@
 Head Network Distillation (HND) and Generalized HND for Faster, Mask, and Keypoint R-CNNs  
 - "Neural Compression and Filtering for Edge-assisted Real-time Object Detection in Challenged Networks," [ICPR 2020](https://www.micc.unifi.it/icpr2020/)  
 [[PDF](https://ieeexplore.ieee.org/document/9412388)] [[Supp](https://ieeexplore.ieee.org/document/9412388/media#media)] [[Preprint](https://arxiv.org/abs/2007.15818)]
-- "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
+- "Split Computing for Complex Object Detectors: Challenges and Preliminary Results," [ACM MobiCom 2020 Workshop EMDL '20](https://emdl20.github.io/index.html)  
 [[PDF (Open Access)](https://dl.acm.org/doi/abs/10.1145/3410338.3412338)] [[Preprint](https://arxiv.org/abs/2007.13312)]  
   
 Looking for **image classification tasks**? Take a look at https://github.com/yoshitomo-matsubara/head-network-distillation as well
