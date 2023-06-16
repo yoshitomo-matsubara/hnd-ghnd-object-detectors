@@ -60,7 +60,7 @@ unzip -q annotations_trainval2017.zip
 ## Checkpoints with trained model weights
 1. Download [emdl2020.zip](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/emdl2020.zip)
 2. Unzip **emdl2020.zip** at the root directory of this repository so that you can use the checkpoints with yaml config files under [config/hnd/](config/hnd/)
-3. Download [icpr2020-faster_rcnn.zip](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/icpr2020-faster_rcnn.zip), [icpr2020-mask_rcnn](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/icpr2020-mask_rcnn.zip), and [icpr2020-keypoint_rcnn](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/icpr2020-keypoint_rcnn.zip)
+3. Download [icpr2020-faster_rcnn.zip](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/icpr2020-faster_rcnn.zip), [icpr2020-mask_rcnn.zip](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/icpr2020-mask_rcnn.zip), and [icpr2020-keypoint_rcnn.zip](https://github.com/yoshitomo-matsubara/hnd-ghnd-object-detectors/releases/download/google_drive-to-github/icpr2020-keypoint_rcnn.zip)
 4. Unzip the three zip files at the root directory of this repository so that you can use the checkpoints with yaml config files under [config/hnd/](config/hnd/) and [config/ghnd/](config/ghnd/)
 5. Test the trained models using the checkpoints and yaml config files  
 e.g., Faster R-CNN with 3 output channels for bottleneck
